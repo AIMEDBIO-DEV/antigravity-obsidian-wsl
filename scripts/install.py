@@ -222,16 +222,9 @@ os.execv(command[0], command)
         managed_write(home / '.local/share/applications' / (name + '-wsl.desktop'), desktop)
 
 
-def create_vault(vault):
-    for folder in ('Inbox', 'Daily', 'Attachments', '.obsidian'):
-        (vault / folder).mkdir(parents=True, exist_ok=True)
-    config = vault / '.obsidian/app.json'
-    if not config.exists():
-        atomic_write(config, json.dumps({'attachmentFolderPath': 'Attachments',
-                     'newFileLocation': 'folder', 'newFileFolderPath': 'Inbox'}, indent=2) + '\n')
-    note = vault / '시작하기.md'
-    if not note.exists():
-        atomic_write(note, f'''# 로컬 노트 시작하기
+def starter_note(vault):
+    """Text of the generated starter note; scripts/vault.py compares against it."""
+    return f'''# 로컬 노트 시작하기
 
 보관함 경로: `{vault}`
 
@@ -242,7 +235,19 @@ def create_vault(vault):
 새 메모는 `Inbox`, 일일 노트는 `Daily`, 첨부 파일은 `Attachments`에 저장합니다.
 노트 연결은 `[[노트 제목]]` 형식을 사용합니다.
 기존 노트와 `.obsidian` 설정은 필요할 때만 변경하도록 요청하세요.
-''')
+'''
+
+
+def create_vault(vault):
+    for folder in ('Inbox', 'Daily', 'Attachments', '.obsidian'):
+        (vault / folder).mkdir(parents=True, exist_ok=True)
+    config = vault / '.obsidian/app.json'
+    if not config.exists():
+        atomic_write(config, json.dumps({'attachmentFolderPath': 'Attachments',
+                     'newFileLocation': 'folder', 'newFileFolderPath': 'Inbox'}, indent=2) + '\n')
+    note = vault / '시작하기.md'
+    if not note.exists():
+        atomic_write(note, starter_note(vault))
 
 
 def register_vault(home, vault):

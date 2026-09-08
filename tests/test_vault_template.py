@@ -66,17 +66,77 @@ class VaultTemplateTests(unittest.TestCase):
             self.assertEqual(self.apply(), 0)
         self.assertIn('규칙 파일 0개 생성', out.getvalue())
 
-    def test_starter_note_moves_only_when_unedited(self):
-        self.assertEqual(self.apply(), 0)
-        note = self.vault / vault_tool.STARTER_NOTE
-        note.write_text(vault_tool.STARTER_MARKER + '\n\n보관함 경로\n')
+    def test_starter_note_moves_only_when_untouched(self):
+        installer = vault_tool.installer()
+        installer.create_vault(self.vault)
         self.assertEqual(self.apply('--adopt-starter-note'), 0)
+        note = self.vault / vault_tool.STARTER_NOTE
         moved = self.vault / 'References' / vault_tool.STARTER_NOTE
         self.assertFalse(note.exists())
         self.assertTrue(moved.read_text().startswith('---\ntype: reference\n'))
-        note.write_text('내가 직접 쓴 노트\n')
-        with self.assertRaises(RuntimeError):
+
+    def test_starter_note_with_edited_body_is_refused(self):
+        installer = vault_tool.installer()
+        installer.create_vault(self.vault)
+        note = self.vault / vault_tool.STARTER_NOTE
+        # Same first line as the generated note, extra content below it.
+        note.write_text(installer.starter_note(self.vault) + '\n내가 추가한 내용\n')
+        with self.assertRaises(RuntimeError) as error:
             self.apply('--adopt-starter-note')
+        self.assertIn('편집', str(error.exception))
+        self.assertTrue(note.is_file())
+        self.assertFalse((self.vault / 'References' / vault_tool.STARTER_NOTE).exists())
+
+    @unittest.skipUnless(HAS_YAML, 'PyYAML is required by the vault validator')
+    def test_adopted_starter_note_passes_validation(self):
+        vault_tool.installer().create_vault(self.vault)
+        self.assertEqual(self.apply('--adopt-starter-note'), 0)
+        stub_addons(self.vault)
+        moved = self.vault / 'References' / vault_tool.STARTER_NOTE
+        self.assertNotIn('[[', moved.read_text())
+        self.assertEqual(vault_tool.validate(self.vault), 0)
+
+    def test_tampered_addon_file_is_reported_not_kept_silently(self):
+        cache = self.home / 'cache'
+        pinned = b'pinned bundle\n'
+        spec = {'url': 'https://example.invalid/main.js',
+                'sha256': __import__('hashlib').sha256(pinned).hexdigest()}
+        with patch.object(vault_tool.urllib.request, 'urlopen') as urlopen:
+            urlopen.return_value.__enter__.return_value = io.BytesIO(pinned)
+            source = vault_tool.fetch('templater-obsidian', 'main.js', spec, cache, offline=False)
+        self.assertEqual(source.read_bytes(), pinned)
+
+        target = self.vault / '.obsidian/plugins/templater-obsidian/main.js'
+        target.parent.mkdir(parents=True, exist_ok=True)
+        one_file = {'templater-obsidian': {'kind': 'plugin', 'version': '2.25.0',
+                                           'files': {'main.js': spec}}}
+        with patch.object(vault_tool, 'addons', return_value=one_file):
+            # What Obsidian itself leaves behind is accepted.
+            target.write_bytes(pinned + vault_tool.OBSIDIAN_PLUGIN_SUFFIX)
+            self.assertEqual(
+                vault_tool.install_addons(TEMPLATE, self.vault, cache, offline=True), [])
+            # Anything else stops the run instead of passing validation later.
+            target.write_bytes(b'window.alert("tampered")\n')
+            with self.assertRaises(RuntimeError) as error:
+                vault_tool.install_addons(TEMPLATE, self.vault, cache, offline=True)
+        self.assertIn('2.25.0', str(error.exception))
+
+    def test_symlinked_target_folder_cannot_write_outside_the_vault(self):
+        outside = self.home / 'outside'
+        outside.mkdir()
+        self.vault.mkdir(parents=True)
+        (self.vault / 'config').symlink_to(outside)
+        with self.assertRaises(RuntimeError) as error:
+            self.apply()
+        self.assertIn('보관함 밖', str(error.exception))
+        self.assertEqual(list(outside.iterdir()), [])
+
+    def test_new_note_folder_outside_the_rule_set_is_reported(self):
+        vault_tool.installer().create_vault(self.vault)
+        with patch('sys.stdout', new_callable=io.StringIO) as out:
+            self.assertEqual(self.apply(), 0)
+        self.assertIn('Inbox/', out.getvalue())
+        self.assertIn('확인 필요', out.getvalue())
 
     def test_addon_download_rejects_wrong_hash(self):
         cache = self.home / 'cache'

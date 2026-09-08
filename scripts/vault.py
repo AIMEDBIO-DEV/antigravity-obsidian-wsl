@@ -2,6 +2,7 @@
 """Apply a vault rule template to a local Obsidian vault without touching notes."""
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -15,10 +16,32 @@ REPO = Path(__file__).resolve().parents[1]
 TEMPLATES = REPO / 'vault-templates'
 LINKS = {'CLAUDE.md': 'AGENTS.md', 'GEMINI.md': 'AGENTS.md',
          '.agents/skills': '../.claude/skills'}
-# Files the installer generates for the generic vault; the rule set expects
-# typed folders instead, so they are only moved when the user opts in.
+# The installer's starter note lives in the vault root, which the rule set
+# reserves; it is only moved when the user opts in and the file is untouched.
 STARTER_NOTE = '시작하기.md'
-STARTER_MARKER = '# 로컬 노트 시작하기'
+# The starter note shows wikilink syntax with a name that is not a real note,
+# so the moved copy states the rule instead of demonstrating a broken link.
+STARTER_LINK_EXAMPLE = '노트 연결은 `[[노트 제목]]` 형식을 사용합니다.\n'
+STARTER_LINK_RULE = '노트 연결은 이중 대괄호 wikilink 문법을 사용하며, 대상 노트가 있어야 합니다.\n'
+# Obsidian appends this to a plugin bundle it installed, so the pinned bytes
+# and the pinned bytes plus this marker are both authentic.
+OBSIDIAN_PLUGIN_SUFFIX = b'\n/* nosourcemap */'
+
+
+def installer():
+    spec = importlib.util.spec_from_file_location('installer', REPO / 'scripts/install.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def inside(vault, path):
+    """Reject a write that a symlinked parent would place outside the vault."""
+    resolved = Path(os.path.realpath(path))
+    root = Path(os.path.realpath(vault))
+    if resolved != root and root not in resolved.parents:
+        raise RuntimeError(f'대상이 보관함 밖을 가리킵니다: {path} -> {resolved}')
+    return path
 
 
 def digest(path):
@@ -81,26 +104,43 @@ def copy_rules(template, vault):
         if source.is_symlink() or relative.name == '.gitkeep':
             continue
         if source.is_dir():
-            target.mkdir(parents=True, exist_ok=True)
+            inside(vault, target).mkdir(parents=True, exist_ok=True)
             continue
         if target.exists():
             if digest(source) != digest(target):
                 kept.append(relative.as_posix())
             continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
+        inside(vault, target.parent).mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, inside(vault, target))
         created.append(relative.as_posix())
     for name in ('Daily', 'Projects', 'People', 'Organizations', 'Products',
                  'Meetings', 'Email_Drafts', 'References', 'Attachments'):
-        (vault / name).mkdir(parents=True, exist_ok=True)
+        inside(vault, vault / name).mkdir(parents=True, exist_ok=True)
     return created, kept
+
+
+def note_folders(template):
+    data = json.loads((template / '.obsidian/plugins/templater-obsidian/data.json').read_text())
+    return {pair['folder'] for pair in data.get('folder_templates', []) if pair.get('folder')}
+
+
+def check_new_file_folder(template, vault):
+    """Report an Obsidian new-note folder the rule set has no template for."""
+    config = vault / '.obsidian/app.json'
+    if not config.is_file():
+        return None
+    folder = json.loads(config.read_text()).get('newFileFolderPath')
+    if folder and folder not in note_folders(template):
+        return (f'Obsidian이 새 노트를 {folder}/에 만들도록 설정돼 있습니다. '
+                '이 규칙 세트에는 해당 폴더의 template이 없어 frontmatter 없는 노트가 생깁니다.')
+    return None
 
 
 def create_links(vault):
     made, wrong = [], []
     for name, destination in LINKS.items():
         path = vault / name
-        path.parent.mkdir(parents=True, exist_ok=True)
+        inside(vault, path.parent).mkdir(parents=True, exist_ok=True)
         if path.is_symlink():
             if os.readlink(path) != destination:
                 wrong.append(f'{name} -> {os.readlink(path)}')
@@ -121,31 +161,44 @@ def install_addons(template, vault, cache, offline):
             target = vault / '.obsidian' / folder / name / filename
             if target.exists() and digest(target) == file_spec['sha256']:
                 continue
-            # Obsidian appends a marker to an installed plugin bundle, so an
-            # existing file with another hash is kept instead of overwritten.
-            if target.exists():
-                continue
             source = fetch(name, filename, file_spec, cache, offline)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, target)
+            if target.exists():
+                # Accept only the pinned bytes, or those bytes with the marker
+                # Obsidian appends after installing a plugin itself. Anything
+                # else is a conflict: the file was edited, truncated, or
+                # replaced, and silently keeping it would hide that.
+                expected = source.read_bytes() + OBSIDIAN_PLUGIN_SUFFIX
+                if target.read_bytes() != expected:
+                    raise RuntimeError(
+                        f'{folder}/{name}/{filename}이 고정된 {spec["version"]} 파일과 다릅니다. '
+                        '직접 확인한 뒤 파일을 지우거나 Obsidian에서 다시 설치하고 재실행하세요.')
+                continue
+            inside(vault, target.parent).mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, inside(vault, target))
             installed.append(f'{folder}/{name}/{filename}')
     return installed
 
 
 def adopt_starter_note(vault):
-    """Move the installer's unedited starter note into the typed folder."""
+    """Move the installer's untouched starter note into the typed folder."""
     note = vault / STARTER_NOTE
     if not note.is_file():
         return None
     text = note.read_text(encoding='utf-8-sig')
-    if not text.startswith(STARTER_MARKER):
-        raise RuntimeError(f'{STARTER_NOTE} was edited; move it yourself and rerun')
+    # Compare against the exact text the installer writes for this vault path;
+    # a first-line match is not enough to prove the note is unedited.
+    if text != installer().starter_note(vault):
+        raise RuntimeError(
+            f'{STARTER_NOTE}이 설치기가 만든 내용과 다릅니다(편집되었을 수 있음). '
+            '직접 확인해 옮긴 뒤 재실행하세요.')
     target = vault / 'References' / STARTER_NOTE
     if target.exists():
-        raise RuntimeError(f'Already present: {target}')
-    target.parent.mkdir(parents=True, exist_ok=True)
-    note.replace(target)
-    target.write_text('---\ntype: reference\nstatus: stable\n---\n\n' + text, encoding='utf-8')
+        raise RuntimeError(f'이미 있습니다: {target}')
+    inside(vault, target.parent).mkdir(parents=True, exist_ok=True)
+    body = text.replace(STARTER_LINK_EXAMPLE, STARTER_LINK_RULE)
+    inside(vault, target).write_text(
+        '---\ntype: reference\nstatus: stable\n---\n\n' + body, encoding='utf-8')
+    note.unlink()
     return target
 
 
@@ -209,6 +262,9 @@ def main(argv=None):
         print('부가 기능 설치:', ', '.join(installed))
     if moved:
         print('시작하기 노트 이동:', moved)
+    warning = check_new_file_folder(template, vault)
+    if warning:
+        print('확인 필요:', warning)
     print('보관함:', vault)
     print('다음: Obsidian에서 Open folder as vault로 위 경로를 열고 SETUP.md를 확인하세요.')
 
