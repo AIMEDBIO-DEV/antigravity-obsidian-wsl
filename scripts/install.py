@@ -290,24 +290,55 @@ def check_environment():
             raise RuntimeError(f'Missing {command}; run scripts/install-deps.sh first.')
 
 
+def select_profile(home, requested=None, vault_override=None):
+    profiles = json.loads((REPO / 'vault-templates/profiles.json').read_text())
+    record = home / '.local/share/wsl-notes/install.json'
+    previous = json.loads(record.read_text()) if record.exists() else {}
+    name = requested or previous.get('profile', 'minimal')
+    if name not in profiles:
+        raise RuntimeError(f'Unknown profile: {name}')
+    info = profiles[name]
+    previous_vault = previous.get('vault') if name == previous.get('profile', 'minimal') else None
+    vault = Path(vault_override or previous_vault or home / 'Obsidian' / info['folder']).expanduser().resolve()
+    return name, info, vault
+
+
+def create_profile_vault(vault, profile, cache, offline):
+    if profile == 'minimal':
+        create_vault(vault)
+    else:
+        command = [sys.executable, str(REPO / 'scripts/vault.py'), '--template', profile,
+                   '--vault', str(vault), '--cache', str(cache / 'obsidian-addons'), '--validate']
+        if offline:
+            command.append('--offline')
+        subprocess.run(command, check=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--vault', type=Path, help='Default: current Linux user home/Obsidian/Notes')
+    parser.add_argument('--profile', choices=('minimal', 'cmc'), help='CMC includes team rules; default keeps the previous profile or minimal')
+    parser.add_argument('--vault', type=Path, help='Default: previous vault, or ~/Obsidian/Notes (minimal) / ~/Obsidian/CMC (cmc)')
     parser.add_argument('--cache', type=Path, help='Default: ~/.cache/wsl-notes')
     parser.add_argument('--offline', action='store_true', help='Require previously verified cache files')
     parser.add_argument('--plan', action='store_true', help='Print paths and versions without changes/downloads')
     args = parser.parse_args()
     home = Path.home().resolve()
-    vault = (args.vault or home / 'Obsidian/Notes').expanduser().resolve()
+    profile, profile_info, vault = select_profile(home, args.profile, args.vault)
     if any(c in str(vault) + str(home) for c in '\n\r\x00'):
         raise RuntimeError('Paths must not contain newline or NUL characters.')
     root = home / '.local/share/wsl-notes'
     specs = json.loads((REPO / 'versions.json').read_text())
     print(json.dumps({'home': str(home), 'vault': str(vault), 'install': str(root),
+                      'profile': profile, 'welcome_note': profile_info['welcome_note'],
                       'versions': {key: val['version'] for key, val in specs.items()}}, indent=2, ensure_ascii=False))
     if args.plan:
         return
     check_environment()
+    if profile == 'cmc':
+        try:
+            __import__('yaml')
+        except ImportError:
+            raise RuntimeError('PyYAML is missing; run scripts/install-deps.sh using system Python.')
     # Fail before downloads or vault changes if old/unmanaged launchers exist.
     for name in specs:
         for path in (home / '.local/bin' / (name + '-wsl'),
@@ -322,12 +353,15 @@ def main():
                     for name, spec in specs.items()}
     create_launchers(home, root, applications)
     configure_input_method(home, root)
-    create_vault(vault)
+    create_profile_vault(vault, profile, cache, args.offline)
     registered = register_vault(home, vault)
     for name in specs:
         subprocess.run(['xdg-mime', 'default', name + '-wsl.desktop', 'x-scheme-handler/' + name], check=True)
     subprocess.run(['update-desktop-database', str(home / '.local/share/applications')], check=False)
-    atomic_write(root / 'install.json', json.dumps({'vault': str(vault), 'versions': specs,
+    atomic_write(root / 'install.json', json.dumps({'vault': str(vault), 'versions': specs, 'profile': profile,
+                                                  'welcome_note': profile_info['welcome_note'],
+                                                  'test_note_folder': profile_info['test_note_folder'],
+                                                  'template_revision': profile_info.get('template_revision'),
                                                   'vault_registered': registered}, indent=2) + '\n')
     print('\nInstallation complete. Launch from the Windows Start menu, or:')
     print(home / '.local/bin/antigravity-wsl')

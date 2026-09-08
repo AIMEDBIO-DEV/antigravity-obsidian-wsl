@@ -8,6 +8,3 @@ aliases: []
 # <% tp.file.title %>
 
 ## Overview
-
-<% tp.file.cursor() %>
-

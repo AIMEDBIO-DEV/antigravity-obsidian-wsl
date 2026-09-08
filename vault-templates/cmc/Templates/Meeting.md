@@ -9,7 +9,7 @@ tags: []
 
 ## 참석자
 
-- <% tp.file.cursor() %>
+-
 
 ## 논의
 
@@ -17,4 +17,3 @@ tags: []
 ## Action items
 
 - [ ]
-

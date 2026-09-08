@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read-only checks; never starts an app or contacts a remote server."""
 from pathlib import Path
+import importlib.util
 import json
 import os
 import platform
@@ -29,6 +30,12 @@ if record.exists():
     data = json.loads(record.read_text())
     vault = Path(data['vault'])
     check('vault', vault.is_dir() and os.access(vault, os.W_OK), str(vault))
+    if data.get('profile') == 'cmc':
+        check('PyYAML', importlib.util.find_spec('yaml') is not None,
+              'required for CMC validation')
+        welcome = vault / data.get('welcome_note', 'SETUP.md')
+        check('CMC welcome note', welcome.is_file(), str(welcome))
+        print('Manual CMC checks: trust plugins; enable the device-local Templater new-file trigger; test folder and Daily templates.')
 else:
     check('installation record', False, str(record))
 if shutil.which('fc-list'):

@@ -10,6 +10,3 @@ role: ""
 # <% tp.file.title %>
 
 ## Communications
-
-<% tp.file.cursor() %>
-

@@ -4,5 +4,8 @@
     "Templates/",
     "scripts/",
     "config/"
-  ]
+  ],
+  "attachmentFolderPath": "Attachments",
+  "newFileLocation": "folder",
+  "newFileFolderPath": "References"
 }

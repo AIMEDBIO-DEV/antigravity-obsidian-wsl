@@ -22,13 +22,21 @@ def finish(home, distribution, powershell):
     record = root / 'install.json'
     data = json.loads(record.read_text())
     vault = Path(data['vault'])
+    profile = data.get('profile', 'minimal')
+    profiles = json.loads((REPO / 'vault-templates/profiles.json').read_text())
+    if profile not in profiles:
+        raise RuntimeError(f'Unknown installed profile: {profile}')
+    info = profiles[profile]
+    welcome = data.get('welcome_note', info['welcome_note'])
+    if Path(welcome).is_absolute() or '..' in Path(welcome).parts:
+        raise RuntimeError('Invalid welcome note path')
+    pending = ['desktop_login', 'antigravity_local_project', 'physical_keyboard', 'note_round_trip'] + info['user_checks']
     if not vault.is_absolute() or not vault.is_dir():
         raise RuntimeError(f'Installed vault is missing: {vault}')
     report_path = root / 'setup-status.json'
     report_path.write_text(json.dumps({
         'vault': str(vault), 'automation_complete': False,
-        'user_checks_pending': ['desktop_login', 'antigravity_local_project',
-                               'physical_keyboard', 'note_round_trip'],
+        'profile': profile, 'user_checks_pending': pending,
     }, ensure_ascii=False, indent=2) + '\n')
     script = subprocess.check_output(
         ['wslpath', '-w', str(REPO / 'scripts/create-windows-shortcuts.ps1')], text=True).strip()
@@ -41,7 +49,7 @@ def finish(home, distribution, powershell):
     logs.mkdir(parents=True, exist_ok=True)
     # The registered vault is opened by absolute path, including non-ASCII/spaces.
     uri = 'obsidian://open?' + urllib.parse.urlencode(
-        {'path': str(vault / '시작하기.md')}, quote_via=urllib.parse.quote)
+        {'path': str(vault / welcome)}, quote_via=urllib.parse.quote)
     processes = {}
     for name, args in (('obsidian', [uri]), ('antigravity', [])):
         with (logs / (name + '-setup.log')).open('a') as log:
@@ -57,8 +65,7 @@ def finish(home, distribution, powershell):
     report = {
         'vault': str(vault), 'automation_complete': True, 'shortcuts_verified': True, 'doctor_passed': True,
         'input_engine_passed': True, 'apps': processes,
-        'user_checks_pending': ['desktop_login', 'antigravity_local_project',
-                                'physical_keyboard', 'note_round_trip'],
+        'profile': profile, 'user_checks_pending': pending,
     }
     report_path = root / 'setup-status.json'
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')
@@ -67,7 +74,11 @@ def finish(home, distribution, powershell):
     print('2. Create New Project → New Project에서 다음 폴더를 선택하고 Local 모드를 사용하세요:')
     print(vault)
     print('3. 앱 입력창에서 한/영 키로 한글을 입력해 보세요.')
-    print('4. Antigravity에 새 Inbox 메모 작성을 요청하고 Obsidian에서 같은 파일을 확인하세요.')
+    print(f'4. Antigravity에 {info["test_note_folder"]}/에 새 메모 작성을 요청하고 Obsidian에서 확인하세요.')
+    if profile == 'cmc':
+        print('CMC: 플러그인 신뢰를 확인한 뒤 Settings → Templater → Trigger Templater on new file creation을 켜세요.')
+        print('이 설정은 PC별입니다. 8개 폴더와 Daily의 실제 템플릿 적용까지 확인해야 완료입니다.')
+        print('규칙 점검:', vault / 'scripts/validate-vault.sh')
     print('Obsidian이 보관함을 열지 못하면 Open folder as vault로 위 폴더를 선택하세요.')
     print('상태 기록:', report_path)
     return report
@@ -77,14 +88,15 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--plan', action='store_true', help='Show steps without making changes')
     parser.add_argument('--finish-only', action='store_true', help='Resume shortcut/check/app steps after installation')
+    parser.add_argument('--profile', choices=('minimal', 'cmc'))
     parser.add_argument('--vault', type=Path)
     parser.add_argument('--cache', type=Path)
     parser.add_argument('--offline', action='store_true', help='Use installed dependencies and cached apps; do not run apt')
     args = parser.parse_args(argv)
-    if args.finish_only and (args.vault or args.cache or args.offline):
-        parser.error('--finish-only uses the existing install.json; omit --vault, --cache, and --offline')
+    if args.finish_only and (args.vault or args.cache or args.offline or args.profile):
+        parser.error('--finish-only uses the existing install.json; omit --profile, --vault, --cache, and --offline')
     install_args = []
-    for flag, value in (('--vault', args.vault), ('--cache', args.cache)):
+    for flag, value in (('--profile', args.profile), ('--vault', args.vault), ('--cache', args.cache)):
         if value is not None:
             install_args.extend([flag, str(value)])
     if args.offline:

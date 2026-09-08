@@ -13,5 +13,3 @@ contact-person: []
 # Email Draft
 
 Subject:
-
-<% tp.file.cursor() %>

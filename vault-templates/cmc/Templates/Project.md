@@ -12,9 +12,8 @@ updated: '<% tp.date.now("YYYY-MM-DD") %>'
 
 ## 목표
 
-<% tp.file.cursor() %>
+
 
 ## 다음 작업
 
 - [ ]
-

@@ -180,6 +180,35 @@ class VaultTemplateTests(unittest.TestCase):
             '---\ntype: project\nstatus: 아무거나\ntags: [made-up-tag]\n---\n\n# bad\n')
         self.assertEqual(vault_tool.validate(self.vault), 1)
 
+    def test_validated_apply_refuses_inbox_before_writing_rules(self):
+        vault_tool.installer().create_vault(self.vault)
+        with self.assertRaisesRegex(RuntimeError, 'Existing settings need review'):
+            self.apply('--validate')
+        self.assertFalse((self.vault / 'AGENTS.md').exists())
+        self.assertTrue((self.vault / '시작하기.md').exists())
+
+    def test_cmc_defaults_need_no_cursor_cleanup_or_window_restore(self):
+        for path in (TEMPLATE / 'Templates').glob('*.md'):
+            self.assertNotIn('tp.file.cursor(', path.read_text())
+        tray = json.loads((TEMPLATE / '.obsidian/plugins/tray/data.json').read_text())
+        self.assertFalse(tray['hideOnLaunch'])
+        self.assertFalse(tray['runInBackground'])
+        self.assertIsNone(vault_tool.check_new_file_folder(TEMPLATE, TEMPLATE))
+
+    def test_profile_selection_preserves_previous_vault_on_reinstall(self):
+        installer = vault_tool.installer()
+        name, info, path = installer.select_profile(self.home, 'cmc')
+        self.assertEqual(path, self.home / 'Obsidian/CMC')
+        self.assertEqual(info['welcome_note'], 'SETUP.md')
+        record = self.home / '.local/share/wsl-notes/install.json'
+        record.parent.mkdir(parents=True)
+        record.write_text(json.dumps({'profile': 'cmc', 'vault': str(self.vault)}))
+        name, _, path = installer.select_profile(self.home)
+        self.assertEqual(name, 'cmc')
+        self.assertEqual(path, self.vault)
+        name, _, path = installer.select_profile(self.home, 'minimal')
+        self.assertEqual(path, self.home / 'Obsidian/Notes')
+
 
 if __name__ == '__main__':
     unittest.main()

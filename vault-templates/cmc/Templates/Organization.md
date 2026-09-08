@@ -6,6 +6,3 @@ aliases: []
 ---
 
 # <% tp.file.title %>
-
-<% tp.file.cursor() %>
-

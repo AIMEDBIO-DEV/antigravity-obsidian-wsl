@@ -9,5 +9,4 @@ created: '<% tp.date.now("YYYY-MM-DD") %>'
 
 ## 오늘 할 일
 
-- [ ] <% tp.file.cursor() %>
-
+- [ ]

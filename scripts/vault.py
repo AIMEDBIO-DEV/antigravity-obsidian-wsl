@@ -129,10 +129,11 @@ def check_new_file_folder(template, vault):
     config = vault / '.obsidian/app.json'
     if not config.is_file():
         return None
-    folder = json.loads(config.read_text()).get('newFileFolderPath')
-    if folder and folder not in note_folders(template):
-        return (f'Obsidian이 새 노트를 {folder}/에 만들도록 설정돼 있습니다. '
-                '이 규칙 세트에는 해당 폴더의 template이 없어 frontmatter 없는 노트가 생깁니다.')
+    settings = json.loads(config.read_text())
+    folder = settings.get('newFileFolderPath')
+    if settings.get('newFileLocation') != 'folder' or not folder or folder not in note_folders(template):
+        return (f'Obsidian 새 노트 위치({folder + "/" if folder else "vault root"})를 확인하세요. '
+                '설정에서 새 노트 위치를 folder / References로 지정하고 재실행하세요.')
     return None
 
 
@@ -245,6 +246,21 @@ def main(argv=None):
 
     if os.geteuid() == 0:
         raise RuntimeError('Run as the normal WSL user, not sudo/root.')
+    # Inspect incompatible existing runtime files before writing any bundle files.
+    conflicts = []
+    warning = check_new_file_folder(template, vault)
+    if warning and args.validate:
+        conflicts.append(warning)
+    for file in (vault / 'Templates').glob('*.md'):
+        if '<% tp.file.cursor(' in file.read_text():
+            conflicts.append(f'{file}: old cursor token; back up and update this template before applying')
+    tray = vault / '.obsidian/plugins/tray/data.json'
+    if tray.is_file():
+        settings = json.loads(tray.read_text())
+        if settings.get('hideOnLaunch') or settings.get('runInBackground'):
+            conflicts.append('Tray: turn off Hide on launch and Run in background before applying on WSL')
+    if conflicts:
+        raise RuntimeError('Existing settings need review; no bundle files written:\n' + '\n'.join(conflicts))
     vault.mkdir(parents=True, exist_ok=True)
     created, kept = copy_rules(template, vault)
     made, wrong = create_links(vault)
