@@ -1,0 +1,13 @@
+# Obsidian 작업 캐시/휴지통 — diff 패인 노이즈 방지용으로 추적 제외
+.trash/
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/graph.json
+.obsidian/cache
+
+# Python 캐시
+__pycache__/
+*.pyc
+
+# Office 임시 락 파일 (문서를 열어둔 동안 생성)
+~$*

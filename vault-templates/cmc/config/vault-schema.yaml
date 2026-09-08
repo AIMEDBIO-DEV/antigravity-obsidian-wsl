@@ -1,0 +1,106 @@
+okf_version: "0.2"
+
+# OKF v0.2 hard conformance is enforced. The vault's existing status field is
+# retained as a domain-specific extension because it already drives project and
+# email workflows.
+excluded_top_level:
+  - .git
+  - .agents
+  - .claude
+  - .codex
+  - .obsidian
+  - Attachments
+  - Templates
+  - scratch
+  - __pycache__
+
+agent_documents:
+  - AGENTS.md
+  - CLAUDE.md
+  - GEMINI.md
+
+# root에 둘 수 있는 노트 목록. 아래 4개는 팀 공통 골격이므로 그대로 둔다.
+# 개인 root 문서를 추가할 때만 이 목록에 등록한다.
+root_allowed:
+  - index.md
+  - Projects MOC.md
+  - People MOC.md
+  - Task Dashboard.md
+  - SETUP.md            # 셋업 안내. 셋업을 마친 뒤 지워도 된다
+
+note_folders:
+  Daily:
+    types: [daily]
+    filename_regex: '^\d{4}-\d{2}-\d{2}\.md$'
+    required_tags: [daily-note]
+  Projects:
+    types: [project, report, issue]
+  People:
+    types: [person]
+    english_filename: true
+  Organizations:
+    types: [organization]
+  Products:
+    types: [product]
+  Meetings:
+    types: [meeting]
+  Email_Drafts:
+    types: [email]
+    required_fields: [subject, date, status]
+  References:
+    types: [reference]
+
+# These values describe existing vault workflows, not OKF v0.2's optional
+# draft/stable/deprecated lifecycle vocabulary.
+status_by_type:
+  project: [idea, to-do, in-progress, waiting, on-hold, completed, merged, living-document]
+  issue: [investigating, completed, quarantine]
+  email: [draft, sent, superseded]
+  product: [active, on-hold, discontinued]
+  reference: [draft, pending-review, stable, superseded, deprecated]
+
+known_tags:
+  # Structure and metadata
+  - daily-note
+  - redirect
+  - master-note
+  - architecture/adr
+  - obsidian
+  # Organization types
+  - cdmo
+  - cro
+  - vendor
+  - bioproduction
+  # AX and development infrastructure
+  - ai-agent
+  - mcp
+  - automation
+  - development
+  - dev-infra
+  - vertex-ai
+  - gcp
+  - cloud-run
+  - meeting-caption
+  # Logistics and workflow
+  - shipping
+  - WorldCourier
+  - Forecast
+  - Cost_Estimation
+  - meeting-note/prep
+  # CMC/GxP domains
+  - formulation
+  - stability
+  - IND
+  - tox
+  - developability
+  - yield
+  - deviation
+  - CLD
+  - change-orders
+  - regulatory/FDA
+  # Business domains
+  - legal
+
+# Accepted only for existing notes. Do not add these to new notes.
+legacy_tags:
+  - email

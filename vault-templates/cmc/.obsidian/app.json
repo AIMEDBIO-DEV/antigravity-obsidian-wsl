@@ -1,0 +1,8 @@
+{
+  "promptDelete": false,
+  "userIgnoreFilters": [
+    "Templates/",
+    "scripts/",
+    "config/"
+  ]
+}

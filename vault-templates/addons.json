@@ -1,0 +1,42 @@
+{
+  "templater-obsidian": {
+    "kind": "plugin",
+    "version": "2.25.0",
+    "files": {
+      "main.js": {
+        "url": "https://github.com/silentvoid13/Templater/releases/download/2.25.0/main.js",
+        "sha256": "6a29790e8ad3bb3de5bcc7381588f20093b2dbecc1ff27d8a5d7ed3fcebbdf4e"
+      }
+    }
+  },
+  "obsidian-minimal-settings": {
+    "kind": "plugin",
+    "version": "8.2.3",
+    "files": {
+      "main.js": {
+        "url": "https://github.com/kepano/obsidian-minimal-settings/releases/download/8.2.3/main.js",
+        "sha256": "8aa9350977fca098f56cea444eb672942e10fcaeb9b07aceb05a3d5368aa742b"
+      }
+    }
+  },
+  "tray": {
+    "kind": "plugin",
+    "version": "0.3.5",
+    "files": {
+      "main.js": {
+        "url": "https://github.com/dragonwocky/obsidian-tray/releases/download/0.3.5/main.js",
+        "sha256": "0471a590b8a3e308293f5d2ea70805377ac1566053728565d63ea4b55094ad42"
+      }
+    }
+  },
+  "Minimal": {
+    "kind": "theme",
+    "version": "8.1.7",
+    "files": {
+      "theme.css": {
+        "url": "https://github.com/kepano/obsidian-minimal/releases/download/8.1.7/theme.css",
+        "sha256": "ee4610bc2aec92a491e3b66fc3c6e854ddcdd3be91abb9f9aa0870f6adbdfaf8"
+      }
+    }
+  }
+}
