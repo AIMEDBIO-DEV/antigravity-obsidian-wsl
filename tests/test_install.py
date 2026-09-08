@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import tarfile
@@ -39,13 +40,25 @@ class InstallerTests(unittest.TestCase):
         executable.chmod(0o755)
         installer.create_launchers(self.home, root, {'antigravity': app})
         launcher = self.home / '.local/bin/antigravity-wsl'
-        result = subprocess.check_output([str(launcher), 'note with spaces', '$(false)'], text=True)
-        self.assertEqual(result, 'note with spaces\n$(false)\n')
+        fake_bin = self.home / 'fake-bin'
+        fake_bin.mkdir()
+        for command in ('systemctl', 'ibus'):
+            executable = fake_bin / command
+            executable.write_text('#!/bin/sh\nexit 0\n')
+            executable.chmod(0o755)
+        env = dict(os.environ, PATH=str(fake_bin) + ':' + os.environ['PATH'])
+        result = subprocess.check_output([str(launcher), 'note with spaces', '$(false)'], text=True, env=env)
+        self.assertEqual(result, '--ozone-platform=x11\nnote with spaces\n$(false)\n')
         desktop = self.home / '.local/share/applications/antigravity-wsl.desktop'
         self.assertIn('%%percent', desktop.read_text())
         if __import__('shutil').which('desktop-file-validate'):
             subprocess.run(['desktop-file-validate', str(desktop)], check=True)
         installer.create_launchers(self.home, root, {'antigravity': app})
+        # A failed input service must not launch the application without an IME.
+        (fake_bin / 'systemctl').write_text('#!/bin/sh\nexit 1\n')
+        failed = subprocess.run([str(launcher)], env=env, capture_output=True, text=True)
+        self.assertNotEqual(failed.returncode, 0)
+        self.assertEqual(failed.stdout, '')
 
     def test_unmanaged_file_not_overwritten(self):
         path = self.home / 'launcher'
