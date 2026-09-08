@@ -18,13 +18,14 @@ Windows 사용자 이름과 Linux 사용자 이름이 달라도 됩니다.
 
 ## 설치 흐름과 역할
 
-**선행 준비 → 저장소 내려받기 → Antigravity CLI에 설치 요청 → 앱 로그인 및 보관함 연결** 순서로 진행합니다.
+**선행 준비 → 저장소 내려받기 → Antigravity CLI에 한 번 설치 요청**으로 진행합니다.
+CLI는 자동 설정 후에도 로그인·프로젝트 연결·한글 입력·노트 열람 확인까지 같은 대화에서 안내합니다.
 
 | 구분 | 담당 범위 |
 | --- | --- |
 | 사용자 선행 작업 | WSL2/WSLg Ubuntu 설치, Antigravity CLI 설치·로그인, GitHub 저장소 접근 준비 |
 | 이 저장소 | Antigravity 2.0 **데스크톱 앱**, Obsidian, 필요한 라이브러리·글꼴·바로가기·로컬 보관함 설치 |
-| 설치 후 사용자 작업 | 데스크톱 앱 로그인, 프로젝트 폴더 선택, 노트 작성 확인 |
+| CLI가 끝까지 안내할 사용자 작업 | 계정 로그인, 필요한 GUI 조작, 실제 키보드 입력·노트 열람 확인 |
 
 **WSL과 Antigravity CLI 자체의 설치·계정 설정은 이 저장소의 자동화 범위 밖입니다.**
 아래 선행 작업은 새 PC 사용자를 위한 안내입니다.
@@ -99,52 +100,59 @@ Git 인증 준비가 어렵다면 GitHub 웹에서 ZIP으로 내려받아 Ubuntu
 다음 요청을 붙여넣습니다.
 
 ```text
-이 저장소의 README를 읽고 현재 WSL 환경에 Antigravity 데스크톱 앱과 Obsidian을 설치해 줘.
-WSL과 Antigravity CLI는 이미 설치되어 있어.
-현재 Linux 사용자의 홈 경로를 사용하고 기존 노트와 설정은 보존해 줘.
-먼저 ./install.sh --plan으로 설치 경로를 확인하고,
-./scripts/install-deps.sh와 ./install.sh를 실행해 줘.
-설치 후 python3 scripts/doctor.py로 점검하고 두 앱 실행까지 확인해 줘.
-sudo 암호 입력, 계정 로그인, GUI 폴더 선택이 필요하면 내가 직접 진행할 수 있게 안내해 줘.
+이 저장소의 README.md와 AGENTS.md를 읽고 설치부터 실제 사용 확인까지 진행해 줘.
+WSL2/WSLg와 Antigravity CLI는 이미 설치되어 있어.
+./setup.sh --plan 확인 후 ./setup.sh를 실행해서 의존성·앱·한글 입력기·보관함 설치,
+터미널 숨김 Windows 바로가기 등록, 점검, 두 앱 실행까지 진행해 줘.
+여기서 끝내지 말고 데스크톱 로그인, 같은 보관함의 Local 프로젝트 연결,
+한/영 키 입력, Antigravity에서 새 노트 작성 후 Obsidian에서 열람까지 이어서 확인해 줘.
+로그인이나 화면 조작이 필요하면 내가 할 일을 한 단계씩 안내하고, 완료하면 계속해 줘.
+현재 Linux 사용자 경로를 사용하고 기존 노트·인증·MCP 설정은 보존해 줘.
+검증하지 못한 항목을 완료로 보고하지 마.
 ```
 
 `sudo` 암호는 터미널의 암호 입력란에 입력합니다. CLI 대화에 암호를 적을 필요는 없습니다.
-설치 후 데스크톱 앱 로그인과 보관함 선택은 아래 최초 연결 절차를 따릅니다.
+`setup.sh`가 자동 설정을 수행하고, `AGENTS.md`가 CLI의 후속 안내와 완료 기준을 정합니다.
+사용자가 별도 설치 명령을 다시 요청할 필요는 없습니다. 로그인 등 사용자 작업이 끝나면
+같은 대화에서 “완료했어, 계속해 줘”라고 알려 주세요.
+CLI에 GUI 제어 도구가 없으면 프로젝트 선택·화면 확인은 사용자가 안내에 따라 진행합니다.
+자동 단계 성공과 실제 사용 확인 완료는 구분해 보고합니다.
 
 ### CLI 없이 직접 설치하는 방법
 
 같은 저장소 폴더에서 다음 스크립트를 직접 실행해도 됩니다.
 
 ```bash
-# 경로와 버전 확인만 수행
-./install.sh --plan
+# 변경 없이 전체 단계 확인
+./setup.sh --plan
 
-# 시스템 라이브러리, 한글/이모지 글꼴 설치 (sudo 암호 필요)
-./scripts/install-deps.sh
-
-# 앱과 보관함은 일반 Linux 사용자로 설치
-./install.sh
+# 의존성부터 숨김 바로가기·입력 검사·두 앱 실행 요청까지
+./setup.sh
 ```
 
 ZIP으로 받았고 실행 권한이 없다면 먼저 실행합니다.
 
 ```bash
-chmod +x install.sh scripts/install-deps.sh
+chmod +x setup.sh install.sh scripts/install-deps.sh
 ```
 
 다른 로컬 보관함 경로를 사용하려면:
 
 ```bash
-./install.sh --vault "$HOME/Obsidian/Research Notes"
+./setup.sh --vault "$HOME/Obsidian/Research Notes"
 ```
 
-`sudo ./install.sh`로 실행하지 마세요. 설치기는 root 실행을 거부합니다.
-설치된 두 앱을 자동 실행하거나 로그인을 대신 수행하지는 않습니다.
+`sudo ./setup.sh`나 `sudo ./install.sh`로 실행하지 마세요. 일반 Linux 사용자로 실행합니다.
+`setup.sh`는 두 앱을 실행하지만 계정 로그인을 대신하지는 않습니다.
+앱 설치 이후 단계만 재개하려면 `./setup.sh --finish-only`를 실행합니다.
+기존 의존성과 캐시만 쓰려면 `./setup.sh --offline`을 사용합니다(apt 실행 생략).
+기존 `./install.sh`는 앱·입력기·보관함까지만 설치하는 하위 명령으로 유지합니다.
 
 ## 5. 앱 실행과 최초 연결
 
-Linux 시작 메뉴 항목은 설치 시 등록되지만, WSLg가 이를 Windows 시작 메뉴에 자동으로 표시하지 않는 환경도 있습니다.
-**Windows 바탕화면과 시작 메뉴에 확실하게 등록하려면** 설치 후 Ubuntu의 저장소 폴더에서 실행합니다.
+`./setup.sh`는 아래 바로가기 등록과 두 앱 실행을 자동으로 진행합니다.
+다음 내용은 CLI가 안내할 최초 연결 절차와 수동 복구 방법입니다.
+`./install.sh`만 실행했거나 바로가기를 개별 갱신하려면 Ubuntu 저장소 폴더에서 실행합니다.
 
 ```bash
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w "$PWD/scripts/create-windows-shortcuts.ps1")" -Distribution "$WSL_DISTRO_NAME"
@@ -280,11 +288,15 @@ X11 및 IBus 환경에서 앱을 실행합니다. WSL 재시작 후에도 바로
 
 입력 엔진 설명: [IBus Hangul](https://github.com/libhangul/ibus-hangul).
 
+자동 단계 상태는 `~/.local/share/wsl-notes/setup-status.json`에 기록됩니다.
+앱 실행 요청만으로 화면이나 로그인 성공을 판정하지 않으며, CLI는 실제 확인 후
+`user_checks_pending`을 갱신합니다. 완료 기준은 [AGENTS.md](AGENTS.md)를 참고하세요.
+
 ## 개발 및 검증
 
 ```bash
 python3 -m unittest discover -s tests -v
-bash -n install.sh scripts/install-deps.sh scripts/wsl-notes-ime.sh
+bash -n setup.sh install.sh scripts/install-deps.sh scripts/wsl-notes-ime.sh
 # WSLg에서 설치 후 실제 입력 엔진 조합 검증 (앱 입력창과 별도 컨텍스트)
 /usr/bin/python3 scripts/verify-korean-input.py
 /usr/bin/python3 scripts/verify-korean-input.py Alt_R
