@@ -16,7 +16,22 @@ Windows 사용자 이름과 Linux 사용자 이름이 달라도 됩니다.
 - ARM64, 일반 Linux 데스크톱, 원격/네트워크 보관함은 이번 배포의 검증 범위에 포함되지 않습니다.
 - Antigravity 로그인에 사용할 본인 계정이 필요합니다. 기업 계정은 조직의 제품 이용 권한이 필요합니다.
 
-## 1. Windows에서 WSL 준비
+## 설치 흐름과 역할
+
+**선행 준비 → 저장소 내려받기 → Antigravity CLI에 설치 요청 → 앱 로그인 및 보관함 연결** 순서로 진행합니다.
+
+| 구분 | 담당 범위 |
+| --- | --- |
+| 사용자 선행 작업 | WSL2/WSLg Ubuntu 설치, Antigravity CLI 설치·로그인, GitHub 저장소 접근 준비 |
+| 이 저장소 | Antigravity 2.0 **데스크톱 앱**, Obsidian, 필요한 라이브러리·글꼴·바로가기·로컬 보관함 설치 |
+| 설치 후 사용자 작업 | 데스크톱 앱 로그인, 프로젝트 폴더 선택, 노트 작성 확인 |
+
+**WSL과 Antigravity CLI 자체의 설치·계정 설정은 이 저장소의 자동화 범위 밖입니다.**
+아래 선행 작업은 새 PC 사용자를 위한 안내입니다.
+CLI(`agy`)는 설치 과정을 진행할 도구이며, 이 저장소가 설치하는 Antigravity 데스크톱 앱과 별개입니다.
+스크립트를 직접 실행할 경우 CLI는 필요하지 않습니다.
+
+## 1. 선행 작업: Windows에서 WSL 준비
 
 이미 WSLg Ubuntu를 사용한다면 다음 단계로 진행합니다.
 처음 설치하는 PC는 관리자 PowerShell에서 실행한 뒤 안내에 따라 재부팅합니다.
@@ -36,20 +51,71 @@ wsl --list --verbose
 WSLg가 없거나 오래된 경우 `wsl --update` 후 WSL을 재시작합니다.
 `wsl --shutdown`은 모든 WSL 작업을 종료하므로 작업을 저장한 후 실행하세요.
 
-## 2. Ubuntu에서 설치
+## 2. 선행 작업: Ubuntu에 Antigravity CLI 설치·로그인
+
+WSL Ubuntu 터미널에서 필요한 기본 도구와 CLI를 설치합니다.
+CLI를 특정 프로젝트 폴더에 설치할 필요는 없습니다.
+공식 설치기는 현재 Linux 사용자의 `~/.local/bin/agy`에 실행 파일을 설치합니다.
+
+```bash
+sudo apt update
+sudo apt install -y curl ca-certificates git
+curl -fsSL https://antigravity.google/cli/install.sh | bash
+~/.local/bin/agy
+```
+
+CLI 안내에 따라 본인의 계정으로 로그인합니다.
+브라우저가 자동으로 열리지 않으면 CLI에 표시되는 인증 안내를 따릅니다.
+로그인을 마치면 CLI를 종료하고 아래 저장소 폴더에서 다시 실행합니다.
+CLI는 일반 Linux 사용자로 실행하며 `sudo`를 붙이지 않습니다.
+
+설치·인증 방식의 최신 내용은 [Antigravity CLI 공식 안내](https://antigravity.google/docs/cli/install/)를 참고하세요.
+
+## 3. 저장소 내려받기
 
 이 저장소가 비공개이면 AIMEDBIO-DEV 저장소 접근 권한이 필요합니다.
 Git 인증을 설정하거나 GitHub에서 **Code → Download ZIP**으로 내려받아 Ubuntu의 홈 아래에 압축을 풉니다.
 Windows에 로그인된 GitHub 계정이 Ubuntu Git에 자동으로 적용되지는 않습니다.
 
 ```bash
-sudo apt update
-sudo apt install -y git
 mkdir -p ~/apps
 cd ~/apps
 git clone https://github.com/AIMEDBIO-DEV/antigravity-obsidian-wsl.git
 cd antigravity-obsidian-wsl
+```
 
+**Antigravity 계정 로그인과 GitHub 인증은 별개입니다.**
+비공개 저장소의 경우 해당 GitHub 계정에 저장소 접근 권한이 있어야 합니다.
+Git 인증 준비가 어렵다면 GitHub 웹에서 ZIP으로 내려받아 Ubuntu 홈 아래에 압축을 푸는 방법을 사용하세요.
+
+## 4. Antigravity CLI에 설치 요청
+
+내려받은 저장소 폴더에서 CLI를 실행합니다. ZIP으로 받은 경우에도 압축을 푼 저장소 폴더로 이동합니다.
+
+```bash
+~/.local/bin/agy
+```
+
+다음 요청을 붙여넣습니다.
+
+```text
+이 저장소의 README를 읽고 현재 WSL 환경에 Antigravity 데스크톱 앱과 Obsidian을 설치해 줘.
+WSL과 Antigravity CLI는 이미 설치되어 있어.
+현재 Linux 사용자의 홈 경로를 사용하고 기존 노트와 설정은 보존해 줘.
+먼저 ./install.sh --plan으로 설치 경로를 확인하고,
+./scripts/install-deps.sh와 ./install.sh를 실행해 줘.
+설치 후 python3 scripts/doctor.py로 점검하고 두 앱 실행까지 확인해 줘.
+sudo 암호 입력, 계정 로그인, GUI 폴더 선택이 필요하면 내가 직접 진행할 수 있게 안내해 줘.
+```
+
+`sudo` 암호는 터미널의 암호 입력란에 입력합니다. CLI 대화에 암호를 적을 필요는 없습니다.
+설치 후 데스크톱 앱 로그인과 보관함 선택은 아래 최초 연결 절차를 따릅니다.
+
+### CLI 없이 직접 설치하는 방법
+
+같은 저장소 폴더에서 다음 스크립트를 직접 실행해도 됩니다.
+
+```bash
 # 경로와 버전 확인만 수행
 ./install.sh --plan
 
@@ -75,7 +141,7 @@ chmod +x install.sh scripts/install-deps.sh
 `sudo ./install.sh`로 실행하지 마세요. 설치기는 root 실행을 거부합니다.
 설치된 두 앱을 자동 실행하거나 로그인을 대신 수행하지는 않습니다.
 
-## 3. 앱 실행과 최초 연결
+## 5. 앱 실행과 최초 연결
 
 Windows 시작 메뉴에서 **Antigravity (WSL)**, **Obsidian (WSL)**을 검색합니다.
 바로가기 노출이 늦거나 보이지 않으면 Ubuntu에서 다음 명령으로 실행합니다.
