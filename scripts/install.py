@@ -140,7 +140,52 @@ def desktop_value(value):
     return str(value).replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '\\r')
 
 
+def create_input_method(home, root):
+    helper = (REPO / 'scripts/wsl-notes-ime.sh').read_text()
+    managed_write(root / 'bin/wsl-notes-ime', helper, 0o755)
+    service = MARKER + "\n" + """[Unit]
+Description=Korean input for WSL Notes apps
+
+[Service]
+Environment=DISPLAY=:0
+Environment=GDK_BACKEND=x11
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%t/bus
+ExecStart=/usr/bin/ibus-daemon --address=unix:abstract=wsl-notes-ibus-%U --xim --config=/usr/libexec/ibus-dconf --panel=disable --emoji-extension=disable
+Restart=on-failure
+RestartSec=2
+"""
+    managed_write(home / '.config/systemd/user/wsl-notes-ibus.service', service)
+
+
+def configure_input_method(home, root):
+    env = dict(os.environ, DBUS_SESSION_BUS_ADDRESS=f'unix:path=/run/user/{os.getuid()}/bus')
+    settings = {
+        'org.freedesktop.ibus.general': {
+            'preload-engines': "['hangul']", 'engines-order': "['hangul']",
+            'use-global-engine': 'true', 'use-system-keyboard-layout': 'true',
+        },
+        'org.freedesktop.ibus.general.hotkey': {'triggers': '[]'},
+        'org.freedesktop.ibus.engine.hangul': {
+            'hangul-keyboard': "'2'", 'initial-input-mode': "'latin'",
+            'switch-keys': "'Hangul,Alt_R,Shift+space'",
+        },
+    }
+    backup = root / 'backups/before-korean-input'
+    for path, name in (('/desktop/ibus/', 'general.dconf'),
+                       ('/org/freedesktop/ibus/engine/hangul/', 'hangul.dconf')):
+        if not (backup / name).exists():
+            data = subprocess.check_output(['dconf', 'dump', path], text=True, env=env)
+            atomic_write(backup / name, data, 0o600)
+    for schema, keys in settings.items():
+        for key, value in keys.items():
+            subprocess.run(['gsettings', 'set', schema, key, value], check=True, env=env)
+    subprocess.run(['systemctl', '--user', 'daemon-reload'], check=True, env=env)
+    subprocess.run(['systemctl', '--user', 'restart', 'wsl-notes-ibus.service'], check=True, env=env)
+    subprocess.run([str(root / 'bin/wsl-notes-ime'), '/usr/bin/true'], check=True, env=env)
+
+
 def create_launchers(home, root, applications):
+    create_input_method(home, root)
     private_bin = root / 'bin'
     opener = '''#!/usr/bin/env python3
 # Managed by antigravity-obsidian-wsl
@@ -166,7 +211,8 @@ os.execv(command[0], command)
         binary = home / '.local/bin' / (name + '-wsl')
         wrapper = '#!/bin/sh\n' + MARKER + '\n'
         wrapper += 'export PATH=' + shlex.quote(str(private_bin)) + ':"$PATH"\n'
-        wrapper += 'exec ' + shlex.quote(str(target / name)) + ' "$@"\n'
+        wrapper += 'exec ' + shlex.quote(str(private_bin / 'wsl-notes-ime')) + ' '
+        wrapper += shlex.quote(str(target / name)) + ' --ozone-platform=x11 "$@"\n'
         managed_write(binary, wrapper, 0o755)
         icon = target / ('icon.png' if name == 'antigravity' else 'resources/icon.png')
         desktop = '[Desktop Entry]\n' + MARKER + '\nType=Application\n'
@@ -234,7 +280,7 @@ def check_environment():
         raise RuntimeError('This release supports x64 PCs only; ARM64 is not yet validated.')
     if not Path('/mnt/wslg').exists() or not (os.getenv('DISPLAY') or os.getenv('WAYLAND_DISPLAY')):
         raise RuntimeError('WSLg is unavailable. Run wsl --update in Windows, then reopen Ubuntu.')
-    for command in ('curl', 'dpkg-deb', 'ldd', 'xdg-mime', 'fc-match'):
+    for command in ('curl', 'dpkg-deb', 'ldd', 'xdg-mime', 'fc-match', 'ibus', 'ibus-daemon', 'gsettings', 'dconf', 'systemctl', 'timeout'):
         if not shutil.which(command):
             raise RuntimeError(f'Missing {command}; run scripts/install-deps.sh first.')
 
@@ -263,10 +309,14 @@ def main():
                      home / '.local/share/applications' / (name + '-wsl.desktop')):
             if path.exists() and MARKER not in path.read_text():
                 raise RuntimeError(f'Existing unmanaged launcher: {path}. Back it up/rename it before installation.')
+    for path in (root / 'bin/wsl-notes-ime', home / '.config/systemd/user/wsl-notes-ibus.service'):
+        if path.exists() and MARKER not in path.read_text():
+            raise RuntimeError(f'Existing unmanaged input method file: {path}. Back it up/rename it before installation.')
     cache = (args.cache or home / '.cache/wsl-notes').expanduser().resolve()
     applications = {name: install_app(name, spec, download(name, spec, cache, args.offline), root)
                     for name, spec in specs.items()}
     create_launchers(home, root, applications)
+    configure_input_method(home, root)
     create_vault(vault)
     registered = register_vault(home, vault)
     for name in specs:

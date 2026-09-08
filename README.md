@@ -155,7 +155,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w "$PWD/scri
 해당 WSL 배포판의 기본 Linux 사용자·홈 경로를 자동으로 확인합니다.
 Antigravity만 만들려면 명령 뒤에 `-App antigravity`를 추가합니다.
 기존 같은 이름의 바로가기 대상이 다르면 백업을 만든 뒤 갱신합니다.
-바로가기는 `wsl.exe`를 사용하며, 등록 전에 임시 바로가기로 Linux 명령의 실제 실행을 검사합니다.
+바로가기는 `wscript.exe` → VBScript → `wsl.exe` 순서로 실행하며, 콘솔 창을 숨깁니다.
+등록 전에 동일한 방식의 임시 바로가기로 Linux 명령의 실제 실행을 검사합니다.
+런처 파일은 Windows의 `%LOCALAPPDATA%\WSL Notes\Launchers`에 저장됩니다.
+기존 바로가기도 위 등록 명령을 다시 실행하면 창 숨김 방식으로 갱신됩니다.
 이 바로가기 도구에서는 배포판·Linux 사용자 이름에 공백이 없어야 합니다(예: `Ubuntu`, `Ubuntu-24.04`).
 `WSL_E_DISTRO_NOT_FOUND`가 표시되는 이전 바로가기는 위 등록 명령을 다시 실행해 갱신하세요.
 일부 WSL 버전은 바로가기의 배포판·사용자 이름에 붙인 따옴표를 이름의 일부로 처리하므로,
@@ -230,7 +233,7 @@ python3 scripts/doctor.py
   표시된 기존 파일을 확인하고 별도 이름으로 백업한 뒤 재시도하세요.
 - **라이브러리 누락:** `./scripts/install-deps.sh`를 실행한 뒤 다시 설치합니다.
 - **한글이 네모로 표시:** 의존성 설치 후 두 앱을 종료하고 다시 실행합니다.
-  한글 표시용 글꼴 설치와 한글 키보드 입력기 설정은 별개입니다. 한글 입력은 Windows/WSLg 환경에 따라 추가 IME 설정이 필요할 수 있습니다.
+  한글 표시용 글꼴과 입력기는 별개입니다. 입력이 안 되면 아래 한글 입력 항목을 확인하세요.
 - **검은 화면/Wayland 문제:** 일회성으로 `~/.local/bin/antigravity-wsl --ozone-platform=x11`을 시도합니다.
 - **sandbox 오류:** root로 실행하지 마세요. `--no-sandbox`를 기본 실행 옵션으로 추가하지 않습니다.
   배포판의 AppArmor/user namespace 정책은 관리자와 확인하세요.
@@ -253,11 +256,39 @@ python3 scripts/doctor.py
 **`~/Obsidian/Notes` 및 앱 사용자 설정은 별도 데이터이므로 보존하세요.**
 이 도구는 노트 삭제 명령을 제공하지 않습니다.
 
+## 한글 입력
+
+의존성 설치 시 `ibus`, `ibus-hangul`, GTK 입력 모듈을 설치하고, 앱 설치 시
+두벌식 입력과 `한/영` 키·오른쪽 Alt·`Shift+Space` 전환을 설정합니다.
+두 앱의 실행 명령은 사용자 서비스 `wsl-notes-ibus.service`를 자동으로 시작하고
+X11 및 IBus 환경에서 앱을 실행합니다. WSL 재시작 후에도 바로가기 실행으로 적용됩니다.
+
+1. 설정 변경 후 실행 중인 앱을 완전히 종료하고 바로가기로 다시 엽니다.
+2. Windows 입력 상태를 영문으로 둡니다.
+3. 앱 입력창에서 **한/영 키** 또는 **Shift+Space**로 전환합니다.
+   한/영 키가 오른쪽 Alt로 전달되는 키보드도 지원합니다.
+
+한글 입력기는 처음에는 영문 모드입니다. Windows가 한/영 키를 먼저 처리하는
+환경에서는 `Shift+Space`를 사용하세요. Ubuntu 26.04 / WSLg 1.0.71에서
+사용자가 실제 앱의 `Shift+Space`와 한/영 키 입력을 확인했습니다.
+
+기존 저장소 설치는 `git pull` 후 `scripts/install-deps.sh`, `./install.sh`를 다시
+실행하면 갱신됩니다. 앱 파일이 검증된 캐시에 있으면 `./install.sh --offline`도 가능합니다.
+설치 프로그램은 사용자 IBus 공용 설정을 변경하며, 기존 설정을
+`~/.local/share/wsl-notes/backups/before-korean-input/{general,hangul}.dconf`에 최초 한 번 백업합니다.
+입력기 서비스는 앱 실행 시 시작하므로 별도의 부팅 자동 시작 등록은 필요하지 않습니다.
+
+입력 엔진 설명: [IBus Hangul](https://github.com/libhangul/ibus-hangul).
+
 ## 개발 및 검증
 
 ```bash
 python3 -m unittest discover -s tests -v
-bash -n install.sh scripts/install-deps.sh
+bash -n install.sh scripts/install-deps.sh scripts/wsl-notes-ime.sh
+# WSLg에서 설치 후 실제 입력 엔진 조합 검증 (앱 입력창과 별도 컨텍스트)
+/usr/bin/python3 scripts/verify-korean-input.py
+/usr/bin/python3 scripts/verify-korean-input.py Alt_R
+/usr/bin/python3 scripts/verify-korean-input.py Hangul
 ```
 
 테스트는 임시 사용자 홈에서 경로의 공백·특수문자, 재실행, 기존 노트/설정 보존,
