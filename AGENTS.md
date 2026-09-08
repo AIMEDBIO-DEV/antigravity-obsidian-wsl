@@ -36,3 +36,13 @@
 - 마지막 보고에는 바로가기, 앱 실행, 로그인/Local 프로젝트, 물리 한글 입력,
   노트 작성→Obsidian 열람 각각의 완료 여부를 명시한다. 남은 항목이 있으면 전체 완료라고 하지 않는다.
 - 기존 노트·인증·MCP 설정을 보존한다. CLI Remote Control 등록은 설치 범위가 아니다.
+
+## 보관함 규칙 템플릿
+
+- `vault-templates/`의 규칙 템플릿은 설치 요청의 범위가 아니다. 사용자가 따로 요청할 때만 적용한다.
+- 적용을 요청받으면 `vault-templates/README.md`를 읽고 `python3 scripts/vault.py`를 사용한다.
+  기존 노트를 덮어쓰거나 옮기지 않으며, `--adopt-starter-note`는 사용자가 요청할 때만 붙인다.
+- 규칙 파일(`vault-templates/*/config/vault-schema.yaml`, `vault-templates/*/AGENTS.md`,
+  `vault-templates/addons.json`)은 팀 공통 정본이므로 이 작업에서 수정하지 않고 문제만 보고한다.
+- 적용 완료는 `scripts/vault.py --validate`가 통과하고, 사용자가 Obsidian에서 템플릿 적용을
+  실제로 확인한 뒤에만 보고한다.

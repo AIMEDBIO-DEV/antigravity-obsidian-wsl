@@ -231,6 +231,21 @@ URL 도우미는 이 설치의 앱에만 적용하며 시스템 `xdg-open`을 �
 HTTP/HTTPS 로그인 링크는 Windows 기본 브라우저로 엽니다.
 Windows의 `antigravity://` 연결 설정은 변경하지 않습니다.
 
+## 보관함 규칙 템플릿 (선택)
+
+설치기가 만드는 보관함은 폴더 3개와 시작 노트만 있는 빈 상태입니다.
+팀에서 쓰는 노트 작성 규칙(폴더별 노트 종류, frontmatter 필수 항목, 태그 목록, 검증 스크립트)을
+얹으려면 `vault-templates/`의 템플릿을 적용합니다.
+
+```bash
+python3 scripts/vault.py --plan          # 대상 경로와 단계 확인
+python3 scripts/vault.py --validate      # ~/Obsidian/CMC에 적용하고 규칙 검증
+```
+
+적용은 선택 사항이며 `setup.sh`, `install.sh`의 동작과 무관합니다.
+없는 파일만 쓰고 기존 노트는 덮어쓰지 않습니다.
+자세한 내용은 [vault-templates/README.md](vault-templates/README.md)를 참고하세요.
+
 ## 점검 및 문제 해결
 
 ```bash
