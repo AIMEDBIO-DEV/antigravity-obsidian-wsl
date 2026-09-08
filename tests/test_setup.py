@@ -69,3 +69,34 @@ class SetupTests(unittest.TestCase):
                     setup.finish(home, 'Ubuntu', '/windows/powershell.exe')
                 popen.assert_not_called()
             self.assertFalse(json.loads((root / 'setup-status.json').read_text())['automation_complete'])
+
+    def test_cmc_resume_opens_setup_and_tracks_device_checks(self):
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            root = home / '.local/share/wsl-notes'
+            root.mkdir(parents=True)
+            vault = home / 'CMC'
+            vault.mkdir()
+            (root / 'install.json').write_text(json.dumps({'vault': str(vault), 'profile': 'cmc'}))
+            child = Mock(pid=123)
+            child.poll.return_value = 0
+            with patch.object(setup, 'run'), \
+                 patch.object(setup.subprocess, 'check_output', return_value='C:\\script.ps1\n'), \
+                 patch.object(setup.subprocess, 'Popen', return_value=child) as popen, \
+                 patch.object(setup.time, 'sleep'):
+                report = setup.finish(home, 'Ubuntu', '/windows/powershell.exe')
+            self.assertIn('SETUP.md', popen.call_args_list[0].args[0][1])
+            self.assertEqual(report['profile'], 'cmc')
+            self.assertIn('templater_device_trigger', report['user_checks_pending'])
+            self.assertIn('folder_templates', report['user_checks_pending'])
+            self.assertIn('window_visible', report['user_checks_pending'])
+
+    def test_cmc_offline_forwards_profile_without_installing_dependencies(self):
+        with patch.object(setup.os, 'geteuid', return_value=1000), \
+             patch.dict(os.environ, WSL_DISTRO_NAME='Ubuntu'), \
+             patch.object(setup.shutil, 'which', return_value='/bin/tool'), \
+             patch.object(setup, 'run') as run, patch.object(setup, 'finish') as finish:
+            setup.main(['--profile', 'cmc', '--offline'])
+        run.assert_called_once()
+        self.assertEqual(run.call_args.args[0][-3:], ['--profile', 'cmc', '--offline'])
+        finish.assert_called_once()

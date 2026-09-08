@@ -1,0 +1,56 @@
+{
+  "data_version": 2,
+  "command_timeout": 5,
+  "templates_folder": "Templates",
+  "templates_pairs": [],
+  "trigger_on_file_creation_mode": "folder",
+  "auto_jump_to_cursor": true,
+  "jump_to_cursor_after_file_name": false,
+  "shell_path": "",
+  "user_scripts_folder": "",
+  "folder_templates": [
+    {
+      "folder": "Daily",
+      "template": "Templates/Daily.md"
+    },
+    {
+      "folder": "Projects",
+      "template": "Templates/Project.md"
+    },
+    {
+      "folder": "People",
+      "template": "Templates/Person.md"
+    },
+    {
+      "folder": "Organizations",
+      "template": "Templates/Organization.md"
+    },
+    {
+      "folder": "Products",
+      "template": "Templates/Product.md"
+    },
+    {
+      "folder": "Meetings",
+      "template": "Templates/Meeting.md"
+    },
+    {
+      "folder": "Email_Drafts",
+      "template": "Templates/Email.md"
+    },
+    {
+      "folder": "References",
+      "template": "Templates/Reference.md"
+    }
+  ],
+  "file_templates": [],
+  "syntax_highlighting": true,
+  "syntax_highlighting_mobile": false,
+  "enabled_templates_hotkeys": [],
+  "startup_templates": [],
+  "intellisense_render": "1",
+  "ignore_folders_on_creation": [
+    {
+      "folder": "Templates"
+    }
+  ]
+}

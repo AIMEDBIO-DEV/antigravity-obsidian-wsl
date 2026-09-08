@@ -1,0 +1,21 @@
+{
+  "minimal": {
+    "folder": "Notes",
+    "welcome_note": "시작하기.md",
+    "test_note_folder": "Inbox",
+    "user_checks": []
+  },
+  "cmc": {
+    "folder": "CMC",
+    "welcome_note": "SETUP.md",
+    "test_note_folder": "References",
+    "template_revision": 2,
+    "user_checks": [
+      "community_plugins",
+      "templater_device_trigger",
+      "folder_templates",
+      "daily_template",
+      "window_visible"
+    ]
+  }
+}

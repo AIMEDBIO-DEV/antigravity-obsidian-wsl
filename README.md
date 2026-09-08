@@ -107,6 +107,7 @@ WSL2/WSLg와 Antigravity CLI는 이미 설치되어 있어.
 여기서 끝내지 말고 데스크톱 로그인, 같은 보관함의 Local 프로젝트 연결,
 한/영 키 입력, Antigravity에서 새 노트 작성 후 Obsidian에서 열람까지 이어서 확인해 줘.
 로그인이나 화면 조작이 필요하면 내가 할 일을 한 단계씩 안내하고, 완료하면 계속해 줘.
+CMC 팀 구조·규칙도 포함하려면 --profile cmc로 설치하고, 플러그인 신뢰와 PC별 Templater 자동 실행 허용까지 안내해 줘.
 현재 Linux 사용자 경로를 사용하고 기존 노트·인증·MCP 설정은 보존해 줘.
 검증하지 못한 항목을 완료로 보고하지 마.
 ```
@@ -148,6 +149,22 @@ chmod +x setup.sh install.sh scripts/install-deps.sh
 기존 의존성과 캐시만 쓰려면 `./setup.sh --offline`을 사용합니다(apt 실행 생략).
 기존 `./install.sh`는 앱·입력기·보관함까지만 설치하는 하위 명령으로 유지합니다.
 
+### 팀 구조·규칙을 포함한 설치
+
+```bash
+./setup.sh --plan --profile cmc
+./setup.sh --profile cmc
+```
+
+CMC 프로필은 기본 `~/Obsidian/CMC`에 규칙·템플릿·애드온을 적용하고 그 보관함을 등록합니다.
+시작 문서는 `SETUP.md`, 새 참고 노트 폴더는 `References`입니다.
+일반 보관함은 `--profile minimal`입니다. 재설치는 저장된 프로필/경로를 유지합니다.
+`--finish-only`는 저장된 프로필의 시작 문서와 검증 항목을 이어갑니다.
+
+CMC 첫 실행에서는 플러그인 사용 허용과 **Templater 자동 실행의 PC별 허용**이 필요합니다.
+이후 8개 폴더·Daily의 실제 노트 생성과 규칙 검증을 마쳐야 전체 완료입니다.
+자세한 절차는 [번들 안내](vault-templates/README.md)와 설치된 `SETUP.md`에 있습니다.
+
 ## 5. 앱 실행과 최초 연결
 
 `./setup.sh`는 아래 바로가기 등록과 두 앱 실행을 자동으로 진행합니다.
@@ -183,7 +200,7 @@ Ubuntu 터미널에서 직접 실행할 수도 있습니다.
 ~/.local/bin/obsidian-wsl
 ```
 
-1. Obsidian에서 `Notes` 보관함과 `시작하기` 노트를 확인합니다.
+1. Obsidian에서 설치 메시지의 보관함을 확인합니다. minimal은 `시작하기.md`, CMC는 `SETUP.md`를 엽니다.
    설치 중 Obsidian이 실행 중이었다면 **Open folder as vault**로 설치 완료 메시지의 경로를 직접 선택합니다.
 2. Antigravity에서 본인의 개인/기업 계정으로 로그인합니다.
 3. 왼쪽 **Create New Project → New Project**를 선택합니다.
@@ -192,7 +209,7 @@ Ubuntu 터미널에서 직접 실행할 수도 있습니다.
    `~`나 `$HOME`을 GUI에 그대로 붙여넣지 마세요.
 5. **Open**으로 폴더를 선택하고 **Local** 환경에서 대화를 시작합니다.
 
-예시 요청:
+minimal 프로필 예시 요청(CMC는 설치된 AGENTS.md를 읽고 References에 type: reference 노트를 작성):
 
 ```text
 이 프로젝트는 로컬 Obsidian 보관함이야.
@@ -230,6 +247,21 @@ Obsidian의 보관함 목록에 새 경로를 추가할 때 기존 목록을 유
 URL 도우미는 이 설치의 앱에만 적용하며 시스템 `xdg-open`을 바꾸지 않습니다.
 HTTP/HTTPS 로그인 링크는 Windows 기본 브라우저로 엽니다.
 Windows의 `antigravity://` 연결 설정은 변경하지 않습니다.
+
+## 보관함 규칙 템플릿 (선택)
+
+설치기가 만드는 보관함은 폴더 3개와 시작 노트만 있는 빈 상태입니다.
+팀에서 쓰는 노트 작성 규칙(폴더별 노트 종류, frontmatter 필수 항목, 태그 목록, 검증 스크립트)을
+얹으려면 `vault-templates/`의 템플릿을 적용합니다.
+
+```bash
+python3 scripts/vault.py --plan          # 대상 경로와 단계 확인
+python3 scripts/vault.py --validate      # ~/Obsidian/CMC에 적용하고 규칙 검증
+```
+
+선택한 CMC 프로필은 `setup.sh --profile cmc`의 설치 흐름에 포함됩니다.
+없는 파일만 쓰고 기존 노트는 덮어쓰지 않습니다.
+자세한 내용은 [vault-templates/README.md](vault-templates/README.md)를 참고하세요.
 
 ## 점검 및 문제 해결
 
