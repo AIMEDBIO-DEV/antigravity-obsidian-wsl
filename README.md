@@ -143,8 +143,24 @@ chmod +x install.sh scripts/install-deps.sh
 
 ## 5. 앱 실행과 최초 연결
 
-Windows 시작 메뉴에서 **Antigravity (WSL)**, **Obsidian (WSL)**을 검색합니다.
-바로가기 노출이 늦거나 보이지 않으면 Ubuntu에서 다음 명령으로 실행합니다.
+Linux 시작 메뉴 항목은 설치 시 등록되지만, WSLg가 이를 Windows 시작 메뉴에 자동으로 표시하지 않는 환경도 있습니다.
+**Windows 바탕화면과 시작 메뉴에 확실하게 등록하려면** 설치 후 Ubuntu의 저장소 폴더에서 실행합니다.
+
+```bash
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w "$PWD/scripts/create-windows-shortcuts.ps1")" -Distribution "$WSL_DISTRO_NAME"
+```
+
+이 명령은 **Antigravity (WSL)**과 **Obsidian (WSL)** 바로가기를 Windows 바탕화면 및
+시작 메뉴의 **WSL Notes** 폴더에 만듭니다. Windows 사용자명, OneDrive 바탕화면 위치,
+해당 WSL 배포판의 기본 Linux 사용자·홈 경로를 자동으로 확인합니다.
+Antigravity만 만들려면 명령 뒤에 `-App antigravity`를 추가합니다.
+기존 같은 이름의 바로가기 대상이 다르면 백업을 만든 뒤 갱신합니다.
+
+바로가기를 더블클릭하면 WSLg 앱이 실행됩니다. WSLg를 별도로 시작할 필요는 없습니다.
+다중 모니터에서 최대화 후 커서 좌표가 어긋나면, 최대화를 해제하고 **F11 전체화면**을 사용해 보세요.
+검증한 PC에서는 F11 전환이 정상 동작했습니다.
+
+Ubuntu 터미널에서 직접 실행할 수도 있습니다.
 
 ```bash
 ~/.local/bin/antigravity-wsl
