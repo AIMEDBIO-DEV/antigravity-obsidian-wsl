@@ -7,26 +7,51 @@ param(
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new()
 $wsl = Join-Path $env:SystemRoot 'System32\wsl.exe'
+if ($Distribution -match '\s|"') { throw 'Use a WSL distribution name without whitespace or quotes for this shortcut.' }
 $linuxUser = (& $wsl --distribution $Distribution --exec id -un | Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or !$linuxUser) { throw 'Cannot identify the WSL user.' }
+if ($linuxUser -match '\s|"') { throw 'The WSL user name must not contain whitespace or quotes.' }
 $linuxHome = (& $wsl --distribution $Distribution --user $linuxUser --exec printenv HOME | Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or !$linuxHome.StartsWith('/')) { throw 'Cannot identify the WSL home directory.' }
 foreach ($value in @($Distribution, $linuxUser, $linuxHome)) {
     if ($value -match '["\r\n]') { throw 'Quotes or newlines in WSL names/paths are not supported.' }
 }
-$wslg = Join-Path $env:ProgramFiles 'WSL\wslg.exe'
-$target = if (Test-Path $wslg) { $wslg } else { $wsl }
+# Use the same supported entry point used for distribution/user validation.
+# Do not directly invoke a potentially different package's wslg.exe.
+$target = $wsl
 $desktop = [Environment]::GetFolderPath('DesktopDirectory')
 $programs = Join-Path ([Environment]::GetFolderPath('Programs')) 'WSL Notes'
 New-Item -ItemType Directory -Force -Path $programs | Out-Null
 $shell = New-Object -ComObject WScript.Shell
+# WSL option values are unquoted: this WSL version retains literal quotes in
+# distribution/user names. The Linux command path after --exec stays quoted.
+# Verify ShellExecute through a real .lnk, not merely the shortcut's saved fields.
+$probeId = [Guid]::NewGuid().ToString('N')
+$probeLinux = "/tmp/wsl-notes-shortcut-$probeId"
+$probeWindows = Join-Path ([IO.Path]::GetTempPath()) ("wsl-notes-$probeId.lnk")
+try {
+    $probe = $shell.CreateShortcut($probeWindows)
+    $probe.TargetPath = $target
+    $probe.Arguments = '--distribution ' + $Distribution + ' --user ' + $linuxUser + ' --exec /usr/bin/touch "' + $probeLinux + '"'
+    $probe.WorkingDirectory = $env:USERPROFILE
+    $probe.WindowStyle = 7
+    $probe.Save()
+    $process = Start-Process -FilePath $probeWindows -PassThru
+    if (!$process.WaitForExit(15000)) { throw 'Shortcut probe timed out.' }
+    & $wsl --distribution $Distribution --user $linuxUser --exec test -f $probeLinux
+    if ($LASTEXITCODE -ne 0) { throw 'Shortcut failed to execute in the selected WSL distribution.' }
+    Write-Output 'Verified: Windows shortcut executed a command inside WSL.'
+} finally {
+    Remove-Item -LiteralPath $probeWindows -Force -ErrorAction SilentlyContinue
+    & $wsl --distribution $Distribution --user $linuxUser --exec rm -f $probeLinux
+}
 $names = if ($App -eq 'all') { @('antigravity', 'obsidian') } else { @($App) }
 foreach ($name in $names) {
     $launcher = "$linuxHome/.local/bin/$name-wsl"
     & $wsl --distribution $Distribution --user $linuxUser --exec test -x $launcher
     if ($LASTEXITCODE -ne 0) { throw "Install the Linux app first: $launcher" }
     $title = (Get-Culture).TextInfo.ToTitleCase($name) + ' (WSL)'
-    $arguments = '--distribution "' + $Distribution + '" --user "' + $linuxUser + '" --exec "' + $launcher + '"'
+    $arguments = '--distribution ' + $Distribution + ' --user ' + $linuxUser + ' --exec "' + $launcher + '"'
     foreach ($folder in @($desktop, $programs)) {
         $path = Join-Path $folder ($title + '.lnk')
         if (Test-Path $path) {
