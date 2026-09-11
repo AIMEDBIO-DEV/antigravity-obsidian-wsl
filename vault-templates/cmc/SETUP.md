@@ -18,7 +18,7 @@ CMC팀 Obsidian vault의 작성 규칙·검증·템플릿 골격이다.
 ## 2. 설치된 보관함 확인
 
 `setup.sh --profile cmc`가 선택한 경로에 이 파일과 규칙을 설치하고 Obsidian에 등록한다.
-기본 경로는 `~/Obsidian/CMC`이며 실제 경로는 설치 완료 메시지 또는 install.json에서 확인한다.
+기본 경로는 minimal과 같은 `~/Obsidian/Notes`이며 실제 경로는 설치 완료 메시지 또는 install.json에서 확인한다.
 이미 설치된 폴더를 다시 mv하거나 기존 보관함을 덮어쓰지 않는다.
 
 `CLAUDE.md`, `GEMINI.md`, `.agents/skills` symlink는 적용기가 만든다.

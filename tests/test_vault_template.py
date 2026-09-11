@@ -198,7 +198,7 @@ class VaultTemplateTests(unittest.TestCase):
     def test_profile_selection_preserves_previous_vault_on_reinstall(self):
         installer = vault_tool.installer()
         name, info, path = installer.select_profile(self.home, 'cmc')
-        self.assertEqual(path, self.home / 'Obsidian/CMC')
+        self.assertEqual(path, self.home / 'Obsidian/Notes')
         self.assertEqual(info['welcome_note'], 'SETUP.md')
         record = self.home / '.local/share/wsl-notes/install.json'
         record.parent.mkdir(parents=True)

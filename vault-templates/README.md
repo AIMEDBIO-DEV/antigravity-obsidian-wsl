@@ -26,15 +26,15 @@ python3 scripts/vault.py --plan
 # 앱 설치와 별개로 규칙만 적용
 python3 scripts/vault.py --validate
 
-# 설치기의 기본 보관함에 얹는 경우
-python3 scripts/vault.py --vault "$HOME/Obsidian/Notes" --adopt-starter-note --validate
+# 설치기의 기본 보관함(Notes)에 이미 만든 시작하기.md까지 옮겨 넣는 경우
+python3 scripts/vault.py --adopt-starter-note --validate
 ```
 
 검증에는 PyYAML이 필요합니다.
 
 ```bash
 sudo apt install python3-yaml
-bash "$HOME/Obsidian/CMC/scripts/validate-vault.sh"
+bash "$HOME/Obsidian/Notes/scripts/validate-vault.sh"
 ```
 
 적용 후 할 일은 보관함에 복사되는 `SETUP.md`에 있습니다.

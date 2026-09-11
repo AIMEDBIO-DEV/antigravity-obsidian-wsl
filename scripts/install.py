@@ -317,7 +317,7 @@ def create_profile_vault(vault, profile, cache, offline):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--profile', choices=('minimal', 'cmc'), help='CMC includes team rules; default keeps the previous profile or minimal')
-    parser.add_argument('--vault', type=Path, help='Default: previous vault, or ~/Obsidian/Notes (minimal) / ~/Obsidian/CMC (cmc)')
+    parser.add_argument('--vault', type=Path, help='Default: previous vault, or ~/Obsidian/Notes')
     parser.add_argument('--cache', type=Path, help='Default: ~/.cache/wsl-notes')
     parser.add_argument('--offline', action='store_true', help='Require previously verified cache files')
     parser.add_argument('--plan', action='store_true', help='Print paths and versions without changes/downloads')

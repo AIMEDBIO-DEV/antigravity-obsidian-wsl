@@ -156,7 +156,7 @@ chmod +x setup.sh install.sh scripts/install-deps.sh
 ./setup.sh --profile cmc
 ```
 
-CMC 프로필은 기본 `~/Obsidian/CMC`에 규칙·템플릿·애드온을 적용하고 그 보관함을 등록합니다.
+CMC 프로필은 기본적으로 minimal과 같은 `~/Obsidian/Notes`에 규칙·템플릿·애드온을 적용하고 그 보관함을 등록합니다.
 시작 문서는 `SETUP.md`, 새 참고 노트 폴더는 `References`입니다.
 일반 보관함은 `--profile minimal`입니다. 재설치는 저장된 프로필/경로를 유지합니다.
 `--finish-only`는 저장된 프로필의 시작 문서와 검증 항목을 이어갑니다.
@@ -256,7 +256,7 @@ Windows의 `antigravity://` 연결 설정은 변경하지 않습니다.
 
 ```bash
 python3 scripts/vault.py --plan          # 대상 경로와 단계 확인
-python3 scripts/vault.py --validate      # ~/Obsidian/CMC에 적용하고 규칙 검증
+python3 scripts/vault.py --validate      # ~/Obsidian/Notes에 적용하고 규칙 검증
 ```
 
 선택한 CMC 프로필은 `setup.sh --profile cmc`의 설치 흐름에 포함됩니다.

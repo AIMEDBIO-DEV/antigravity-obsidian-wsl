@@ -216,7 +216,7 @@ def validate(vault):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--template', default='cmc', help='Template under vault-templates/')
-    parser.add_argument('--vault', type=Path, help='Default: current Linux user home/Obsidian/CMC')
+    parser.add_argument('--vault', type=Path, help='Default: current Linux user home/Obsidian/Notes')
     parser.add_argument('--cache', type=Path)
     parser.add_argument('--plan', action='store_true', help='Show steps without making changes')
     parser.add_argument('--offline', action='store_true', help='Use cached add-on files only')
@@ -231,7 +231,7 @@ def main(argv=None):
         parser.error(f'Unknown template {args.template}; available: {", ".join(available)}')
     template = TEMPLATES / args.template
     home = Path.home()
-    vault = (args.vault or home / 'Obsidian/CMC').expanduser().resolve()
+    vault = (args.vault or home / 'Obsidian/Notes').expanduser().resolve()
     cache = (args.cache or home / '.cache/wsl-notes/obsidian-addons').expanduser().resolve()
     if any(character in str(vault) for character in '\n\r\x00'):
         raise RuntimeError('Vault path contains a control character')
