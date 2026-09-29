@@ -50,7 +50,8 @@ def digest(path):
 
 def download(name, spec, cache, offline=False):
     cache.mkdir(parents=True, exist_ok=True)
-    path = cache / (name + '-' + spec['sha256'] + ('.tar.gz' if name == 'antigravity' else '.deb'))
+    suffix = spec.get('suffix') or ('.tar.gz' if name == 'antigravity' else '.deb')
+    path = cache / (name + '-' + spec['sha256'] + suffix)
     if path.exists():
         if digest(path) != spec['sha256']:
             raise RuntimeError(f'Cached checksum mismatch: {path}; remove this cache file and retry.')
@@ -70,8 +71,8 @@ def download(name, spec, cache, offline=False):
     return path
 
 
-def safe_extract(archive, destination):
-    with tarfile.open(archive, 'r:gz') as source:
+def safe_extract(archive, destination, mode='r:gz'):
+    with tarfile.open(archive, mode) as source:
         for member in source.getmembers():
             name = posixpath.normpath(member.name)
             if name.startswith('/') or name == '..' or name.startswith('../'):

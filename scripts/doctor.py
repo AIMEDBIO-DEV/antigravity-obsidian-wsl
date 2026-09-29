@@ -48,6 +48,21 @@ if shutil.which('gsettings'):
                           capture_output=True, text=True)
     check('Korean toggle keys', keys.returncode == 0 and all(k in keys.stdout for k in ('Hangul', 'Alt_R', 'Shift+space')),
           keys.stdout.strip() or 'run the installer to configure IBus Hangul')
+tools_record = home / '.local/share/wsl-notes/tools-install.json'
+if tools_record.exists():
+    tools = json.loads(tools_record.read_text())
+    slides = Path(tools['slides'])
+    check('tools install', tools.get('complete') is True, json.dumps(tools.get('steps'), ensure_ascii=False))
+    officecli = shutil.which('officecli') or str(home / '.local/bin/officecli')
+    check('officecli', Path(officecli).is_file(), officecli)
+    check('open-slide workspace', (slides / 'package.json').is_file() and (slides / 'node_modules').is_dir(), str(slides))
+    for theme in tools.get('themes', []):
+        theme_file = slides / 'themes' / (theme + '.md')
+        check('slide theme ' + theme, theme_file.is_file(), str(theme_file))
+    launcher = Path(tools.get('launcher', home / '.local/bin/slides-wsl'))
+    check('slides launcher', launcher.is_file(), str(launcher))
+else:
+    print('INFO: document/slide tools not installed (skipped or --no-tools); run ./setup.sh to add them.')
 print('Manual check: type Korean using Hangul/Right Alt or Shift+Space in each app.')
 print('Manual check: login → Notes project → Local mode → create Inbox/test.md → view in Obsidian.')
 sys.exit(0 if all(checks) else 1)
