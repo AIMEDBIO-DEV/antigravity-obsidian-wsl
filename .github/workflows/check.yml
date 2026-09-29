@@ -14,7 +14,10 @@ jobs:
       - run: bash -n setup.sh install.sh scripts/install-deps.sh scripts/wsl-notes-ime.sh
       - run: pip install -r vault-templates/cmc/scripts/requirements.txt
       - run: python3 -m unittest discover -s tests -v
+      - run: python3 -m py_compile scripts/tools.py scripts/setup.py scripts/doctor.py scripts/install.py
       - run: ./install.sh --plan
       - run: ./setup.sh --plan
       - run: ./setup.sh --plan --profile cmc
       - run: python3 scripts/vault.py --plan
+      - run: python3 scripts/tools.py --plan
+      - run: ./setup.sh --plan --no-tools

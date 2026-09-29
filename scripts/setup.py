@@ -11,6 +11,7 @@ import time
 import urllib.parse
 
 REPO = Path(__file__).resolve().parents[1]
+TOOL_CHECKS = ['officecli_smoke', 'open_slide_preview', 'cmc_weekly_theme']
 
 
 def run(command, **kwargs):
@@ -31,6 +32,10 @@ def finish(home, distribution, powershell):
     if Path(welcome).is_absolute() or '..' in Path(welcome).parts:
         raise RuntimeError('Invalid welcome note path')
     pending = ['desktop_login', 'antigravity_local_project', 'physical_keyboard', 'note_round_trip'] + info['user_checks']
+    tools_record = root / 'tools-install.json'
+    tools = json.loads(tools_record.read_text()) if tools_record.exists() else None
+    if tools and tools.get('complete'):
+        pending += TOOL_CHECKS
     if not vault.is_absolute() or not vault.is_dir():
         raise RuntimeError(f'Installed vault is missing: {vault}')
     report_path = root / 'setup-status.json'
@@ -79,6 +84,13 @@ def finish(home, distribution, powershell):
         print('CMC: 플러그인 신뢰를 확인한 뒤 Settings → Templater → Trigger Templater on new file creation을 켜세요.')
         print('이 설정은 PC별입니다. 8개 폴더와 Daily의 실제 템플릿 적용까지 확인해야 완료입니다.')
         print('규칙 점검:', vault / 'scripts/validate-vault.sh')
+    if tools and tools.get('complete'):
+        print('문서·슬라이드 도구:')
+        print('5. officecli로 임시 docx 한 개를 만들고 열어 보세요 (예: officecli create /tmp/test.docx).')
+        print(f'6. {tools["launcher"]} 로 미리보기를 열고, 테마 패널에서 cmc-weekly 데모가 보이는지 확인하세요.')
+        print('작업공간:', tools['slides'])
+    elif tools:
+        print('문서·슬라이드 도구 설치가 완료되지 않았습니다. 네트워크 연결 후 ./setup.sh를 다시 실행하세요.')
     print('Obsidian이 보관함을 열지 못하면 Open folder as vault로 위 폴더를 선택하세요.')
     print('상태 기록:', report_path)
     return report
@@ -92,19 +104,29 @@ def main(argv=None):
     parser.add_argument('--vault', type=Path)
     parser.add_argument('--cache', type=Path)
     parser.add_argument('--offline', action='store_true', help='Use installed dependencies and cached apps; do not run apt')
+    parser.add_argument('--no-tools', action='store_true', help='Skip officecli, Node/pnpm and the open-slide workspace')
+    parser.add_argument('--slides', type=Path, help='open-slide workspace folder (default: previous, or ~/Slides)')
     args = parser.parse_args(argv)
-    if args.finish_only and (args.vault or args.cache or args.offline or args.profile):
-        parser.error('--finish-only uses the existing install.json; omit --profile, --vault, --cache, and --offline')
+    if args.finish_only and (args.vault or args.cache or args.offline or args.profile or args.slides):
+        parser.error('--finish-only uses the existing install.json; omit --profile, --vault, --slides, --cache, and --offline')
+    if args.no_tools and args.slides:
+        parser.error('--slides cannot be combined with --no-tools')
     install_args = []
     for flag, value in (('--profile', args.profile), ('--vault', args.vault), ('--cache', args.cache)):
         if value is not None:
             install_args.extend([flag, str(value)])
     if args.offline:
         install_args.append('--offline')
+    tools_args = [flag_value for flag, value in (('--slides', args.slides), ('--cache', args.cache))
+                  if value is not None for flag_value in (flag, str(value))]
+    if args.offline:
+        tools_args.append('--offline')
     if args.plan:
         if not args.finish_only:
             run([sys.executable, REPO / 'scripts/install.py', '--plan', *install_args])
-        print('Steps: dependencies → apps/vault/IME → hidden Windows shortcuts → checks → open apps')
+            if not args.no_tools:
+                run([sys.executable, REPO / 'scripts/tools.py', '--plan', *tools_args])
+        print('Steps: dependencies → apps/vault/IME → officecli/Node/open-slide (skip: --no-tools) → hidden Windows shortcuts → checks → open apps')
         print('Then guide desktop login → Local project → physical Korean input → note round trip.')
         return
     if os.geteuid() == 0:
@@ -117,6 +139,8 @@ def main(argv=None):
         if not args.offline:
             run(['bash', REPO / 'scripts/install-deps.sh'])
         run([sys.executable, REPO / 'scripts/install.py', *install_args])
+        if not args.no_tools:
+            run([sys.executable, REPO / 'scripts/tools.py', *tools_args])
     finish(Path.home(), distribution, powershell)
 
 

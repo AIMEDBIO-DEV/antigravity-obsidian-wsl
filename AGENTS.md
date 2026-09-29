@@ -8,7 +8,8 @@
 1. WSL2/WSLg, x64 Ubuntu, 일반 Linux 사용자, GitHub 접근 준비를 확인한다.
 2. `./setup.sh --plan`으로 사용자별 경로와 단계를 확인한다.
 3. 팀 규칙 번들까지 요청받으면 `./setup.sh --profile cmc`를 실행한다. 일반 빈 보관함은 `./setup.sh --profile minimal`을 사용한다. 이 명령이 의존성, 앱, 입력기, 보관함, Windows 숨김 바로가기,
-   doctor 점검, 입력 엔진 검증, 두 앱 실행 요청을 순서대로 수행한다.
+   officecli·Node/pnpm·open-slide 작업공간(`~/Slides`)과 cmc-weekly 테마 설치, doctor 점검, 입력 엔진 검증, 두 앱 실행 요청을 순서대로 수행한다.
+   사용자가 도구를 원하지 않으면 `--no-tools`를 붙인다.
    sudo 암호는 사용자가 터미널에서 직접 입력하도록 한다. 대화로 암호를 받지 않는다.
 4. 자동 단계가 성공해도 여기서 설치 완료로 종료하지 않는다. 로그인·프로젝트 연결·사용 검증을 이어간다.
    계정 로그인은 사용자가 수행해야 한다. 로그인 완료 후 같은 대화에서 계속한다.
@@ -24,6 +25,12 @@
    파일이 UTF-8 한글로 생성됐는지 읽고, Obsidian에서 열리는지 확인한다.
    CLI가 대신 노트를 만들어 데스크톱 앱의 작성 성공으로 보고하지 않는다.
 
+9. `~/.local/share/wsl-notes/tools-install.json`이 있고 `complete`가 true이면 도구도 실제로 확인한다.
+   - **officecli:** 사용하지 않은 임시 경로(예: `/tmp`)에 `officecli create`로 docx를 만들고 파일이 생성됐는지 읽는다. 사용자의 기존 문서를 시험에 쓰지 않는다.
+   - **open-slide:** `~/.local/bin/slides-wsl`로 개발 서버를 띄우고 사용자가 Windows 브라우저에서 화면을 보는지 확인받는다. Themes 패널의 `cmc-weekly` 데모 표시까지 안내한다.
+   - **슬라이드 작성:** 사용자가 원하면 Antigravity 데스크톱 앱이나 `~/Slides`의 CLI로 `/create-slide` 시험 덱을 만들고 미리보기에서 열리는지 확인한다.
+   CLI가 대신 실행해 놓고 화면 확인을 마친 것으로 보고하지 않는다.
+
 ## 재개와 완료 보고
 
 - 설치 이후 단계만 실패했으면 원인을 해결하고 `./setup.sh --finish-only`로 재개한다.
@@ -35,7 +42,16 @@
   인증 토큰이나 비밀번호는 기록하지 않는다.
 - 마지막 보고에는 바로가기, 앱 실행, 로그인/Local 프로젝트, 물리 한글 입력,
   노트 작성→Obsidian 열람 각각의 완료 여부를 명시한다. 남은 항목이 있으면 전체 완료라고 하지 않는다.
+- `tools-install.json`의 `complete`가 false이거나 `--offline`으로 단계가 생략됐으면 도구 항목을 완료라고 하지 않는다. 네트워크 연결 후 `python3 scripts/tools.py`로 재개한다.
+- 도구 항목(`officecli_smoke`, `open_slide_preview`, `cmc_weekly_theme`)도 `verified_checks`에 검증 방법을 기록한 뒤에만 pending에서 제거한다.
+- officecli(공식 스크립트, 자동 업데이트)와 open-slide(`@latest`)는 버전이 고정되지 않는다. 설치된 버전을 보고서에 적고 이 점을 숨기지 않는다.
 - 기존 노트·인증·MCP 설정을 보존한다. CLI Remote Control 등록은 설치 범위가 아니다.
+
+## 슬라이드 테마 번들
+
+- `slide-templates/*`와 `~/Slides`의 기존 테마·슬라이드는 이 작업에서 수정하지 않고 문제만 보고한다. 설치기는 없는 파일만 복사한다.
+- 번들의 데모에는 가상의 예시 데이터만 둔다. 실명·협력사명·과제 코드·실제 진행 상황·원본 pptx를 넣지 않는다(공개 저장소).
+- `~/Slides`가 open-slide 작업공간이 아니면 수정하지 말고 사용자에게 다른 경로(`--slides`)를 묻는다.
 
 ## 보관함 규칙 템플릿
 

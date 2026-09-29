@@ -3,6 +3,8 @@
 Windows PC의 WSL Ubuntu에 **Antigravity 2.0과 Obsidian Linux 앱**을 설치하고,
 같은 로컬 보관함의 Markdown 파일을 작성·열람하는 설치 도구입니다.
 두 앱의 창은 WSLg를 통해 Windows 바탕화면에 표시됩니다.
+함께 문서·슬라이드 도구인 **officecli**(Word/Excel/PowerPoint)와 **open-slide**(에이전트용 슬라이드 프레임워크),
+팀 테마 `cmc-weekly`도 설치합니다. 도구가 필요 없으면 `--no-tools`로 건너뜁니다.
 
 기본 보관함은 **설치를 실행한 Linux 사용자의 `~/Obsidian/Notes`**입니다.
 Windows 사용자 이름과 Linux 사용자 이름이 달라도 됩니다.
@@ -24,7 +26,7 @@ CLI는 자동 설정 후에도 로그인·프로젝트 연결·한글 입력·�
 | 구분 | 담당 범위 |
 | --- | --- |
 | 사용자 선행 작업 | WSL2/WSLg Ubuntu 설치, Antigravity CLI 설치·로그인, GitHub 저장소 접근 준비 |
-| 이 저장소 | Antigravity 2.0 **데스크톱 앱**, Obsidian, 필요한 라이브러리·글꼴·바로가기·로컬 보관함 설치 |
+| 이 저장소 | Antigravity 2.0 **데스크톱 앱**, Obsidian, 필요한 라이브러리·글꼴·바로가기·로컬 보관함, officecli, Node/pnpm, open-slide 작업공간(`~/Slides`)과 팀 테마 설치 |
 | CLI가 끝까지 안내할 사용자 작업 | 계정 로그인, 필요한 GUI 조작, 실제 키보드 입력·노트 열람 확인 |
 
 **WSL과 Antigravity CLI 자체의 설치·계정 설정은 이 저장소의 자동화 범위 밖입니다.**
@@ -108,6 +110,7 @@ WSL2/WSLg와 Antigravity CLI는 이미 설치되어 있어.
 한/영 키 입력, Antigravity에서 새 노트 작성 후 Obsidian에서 열람까지 이어서 확인해 줘.
 로그인이나 화면 조작이 필요하면 내가 할 일을 한 단계씩 안내하고, 완료하면 계속해 줘.
 CMC 팀 구조·규칙도 포함하려면 --profile cmc로 설치하고, 플러그인 신뢰와 PC별 Templater 자동 실행 허용까지 안내해 줘.
+officecli와 open-slide(~/Slides, cmc-weekly 테마)도 설치되니, docx 한 장 생성과 슬라이드 미리보기 화면 확인까지 이어서 해 줘.
 현재 Linux 사용자 경로를 사용하고 기존 노트·인증·MCP 설정은 보존해 줘.
 검증하지 못한 항목을 완료로 보고하지 마.
 ```
@@ -135,6 +138,13 @@ ZIP으로 받았고 실행 권한이 없다면 먼저 실행합니다.
 
 ```bash
 chmod +x setup.sh install.sh scripts/install-deps.sh
+```
+
+문서·슬라이드 도구는 기본으로 함께 설치됩니다. 건너뛰거나 작업공간 경로를 바꾸려면:
+
+```bash
+./setup.sh --no-tools                       # officecli, Node/pnpm, open-slide 생략
+./setup.sh --slides "$HOME/Decks"           # 슬라이드 작업공간 경로 지정 (기본 ~/Slides)
 ```
 
 다른 로컬 보관함 경로를 사용하려면:
@@ -222,6 +232,45 @@ Obsidian에서 `Inbox/첫 메모.md`가 나타나는지 확인합니다.
 같은 폴더를 사용하는 방식이므로 노트 작성에 별도 MCP나 동기화 플러그인은 필요하지 않습니다.
 동일 노트를 두 앱에서 동시에 수정하면 편집 충돌이 생길 수 있습니다.
 
+## 문서·슬라이드 도구
+
+`setup.sh`(또는 `python3 scripts/tools.py`)가 다음을 순서대로 준비합니다. 모두 일반 사용자 권한으로 동작하며 `sudo`가 필요 없습니다.
+
+| 도구 | 설치 방식 |
+| --- | --- |
+| **officecli** | 공식 설치 스크립트 실행. `~/.local/bin/officecli`. 이미 설치되어 있으면 건너뜁니다. |
+| **Node** | `^20.19 \|\| >=22.12` 조건을 만족하는 Node가 PATH에 있으면 그대로 사용합니다. 없으면 [tools.json](tools.json)의 **고정 버전·SHA-256**으로 `~/.local/share/wsl-notes/node/`에 설치합니다. |
+| **pnpm** | 이미 있으면 유지합니다. 없으면 고정 버전을 `~/.local/share/wsl-notes/tools/`에 설치합니다(전역 설정 변경 없음). |
+| **open-slide** | `@open-slide/cli@latest`로 `~/Slides`에 작업공간을 만들고 의존성을 설치합니다(**버전 미고정**). 폴더가 이미 있으면 그대로 두고, open-slide가 아닌 폴더면 중단합니다. |
+| **cmc-weekly 테마** | [slide-templates/](slide-templates/README.md)의 테마·로고를 `~/Slides/themes`, `~/Slides/assets`에 **없는 파일만** 복사합니다. |
+
+**신뢰 범위:** Antigravity·Obsidian·Node는 해시로 검증하지만 **officecli와 open-slide는 버전을 고정하지 않습니다.**
+officecli는 공식 스크립트를 그대로 신뢰하고 자동 업데이트도 하며, open-slide는 설치 시점의 최신판(`latest`)을 받습니다.
+따라서 PC마다 버전이 다를 수 있고, 설치된 open-slide 버전은 `tools-install.json`의 `open_slide_core`에 기록됩니다.
+기존 작업공간의 open-slide는 `pnpm up @open-slide/core`로 직접 올립니다.
+공식 스크립트는 `~/.local/bin`이 PATH에 없으면 `~/.bashrc`에 PATH 한 줄을 추가합니다.
+스크립트가 감지된 에이전트 폴더에 skill을 넣지만 Antigravity 폴더는 감지하지 못할 수 있으므로,
+설치기가 `~/.agents/skills/officecli/SKILL.md`가 없으면 별도로 내려받아 둡니다(기존 파일은 유지).
+
+### 사용
+
+```bash
+officecli --version
+~/.local/bin/slides-wsl      # open-slide 개발 서버 실행, Windows 브라우저에서 http://localhost:5173 열기
+```
+
+슬라이드 작업은 `~/Slides`에서 Antigravity CLI(`agy`)를 실행해 요청합니다. 예: “`/create-slide`로 이번 주 주간 보고를 cmc-weekly 테마로 만들어 줘.”
+개발 서버의 **Themes** 패널에서 `cmc-weekly` 데모를 확인할 수 있습니다.
+미리보기 브라우저가 자동으로 열리지 않으면 터미널에 표시된 주소를 Windows 브라우저에 직접 입력하세요.
+
+### 문제 해결
+
+- **`officecli`를 찾을 수 없음:** 새 터미널을 열거나 `source ~/.bashrc`를 실행합니다. 그래도 없으면 `~/.local/bin/officecli`를 확인합니다.
+- **`~/Slides`가 open-slide 폴더가 아니라며 중단:** 기존 폴더는 수정하지 않습니다. `--slides`로 다른 경로를 지정하세요.
+- **도구 설치 실패:** 원인을 해결하고 `python3 scripts/tools.py`만 다시 실행하면 됩니다. 이미 만든 결과는 유지됩니다.
+- **`--offline`:** 네트워크가 필요한 단계는 건너뛰고 그 사실을 표시합니다. 완료로 기록되지 않으므로 연결 후 다시 실행하세요.
+- 스캐폴더는 일부 특수문자가 든 경로를 거부합니다. 작업공간 경로에는 공백·따옴표를 피하세요.
+
 ## 설치되는 항목
 
 | 항목 | 위치 |
@@ -233,6 +282,11 @@ Obsidian에서 `Inbox/첫 메모.md`가 나타나는지 확인합니다.
 | 다운로드 캐시 | `~/.cache/wsl-notes/` |
 | 설치 기록 | `~/.local/share/wsl-notes/install.json` |
 | 기본 보관함 | `~/Obsidian/Notes` |
+| 슬라이드 작업공간 | `~/Slides` (테마: `themes/cmc-weekly.*`, 로고: `assets/image1~3.png`) |
+| 슬라이드 실행 명령 | `~/.local/bin/slides-wsl` |
+| officecli | `~/.local/bin/officecli`, skill: `~/.agents/skills/officecli/` |
+| Node(없을 때만) / pnpm(없을 때만) | `~/.local/share/wsl-notes/node/`, `~/.local/share/wsl-notes/tools/` |
+| 도구 설치 기록 | `~/.local/share/wsl-notes/tools-install.json` |
 
 앱 바이너리는 저장소에 포함하지 않고 공식 Google/Obsidian 배포처에서 내려받습니다.
 [versions.json](versions.json)의 버전과 SHA-256을 확인한 뒤 설치합니다.
@@ -293,7 +347,8 @@ python3 scripts/doctor.py
 앱 자체의 자동 업데이트 동작은 제품에 따라 다르므로 설치 기록과 실제 앱 버전은 달라질 수 있습니다.
 
 제거하려면 두 앱을 종료하고 위 표의 앱 파일, 실행 명령, 시작 메뉴 항목을 삭제합니다.
-**`~/Obsidian/Notes` 및 앱 사용자 설정은 별도 데이터이므로 보존하세요.**
+**`~/Obsidian/Notes`, `~/Slides` 및 앱 사용자 설정은 별도 데이터이므로 보존하세요.**
+도구는 `~/.local/bin/slides-wsl`, `~/.local/bin/officecli`와 `~/.local/share/wsl-notes/{node,tools}`를 삭제하면 제거됩니다.
 이 도구는 노트 삭제 명령을 제공하지 않습니다.
 
 ## 한글 입력
@@ -342,7 +397,8 @@ bash -n setup.sh install.sh scripts/install-deps.sh scripts/wsl-notes-ime.sh
 
 - [Antigravity 공식 다운로드](https://antigravity.google/download?platform=linux)
 - [Obsidian 공식 다운로드](https://obsidian.md/download)
+- [open-slide](https://github.com/1weiho/open-slide) · [OfficeCLI](https://github.com/iOfficeAI/OfficeCLI)
 - [Microsoft WSL GUI 앱 안내](https://learn.microsoft.com/en-us/windows/wsl/tutorials/gui-apps)
 
-Antigravity와 Obsidian은 각 공급업체가 배포하는 별도 제품이며 해당 이용 조건이 적용됩니다.
-이 저장소는 두 제품의 공식 설치 도구가 아닙니다.
+Antigravity, Obsidian, officecli, open-slide, Node는 각 공급업체·프로젝트가 배포하는 별도 제품이며 해당 이용 조건이 적용됩니다.
+이 저장소는 이들 제품의 공식 설치 도구가 아닙니다.
