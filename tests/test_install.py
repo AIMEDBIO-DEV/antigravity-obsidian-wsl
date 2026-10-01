@@ -33,13 +33,13 @@ class InstallerTests(unittest.TestCase):
 
     def test_launchers_quote_paths_and_arguments(self):
         root = self.home / '.local/share/wsl-notes'
-        app = root / 'apps/antigravity/1'
+        app = root / 'apps/obsidian/1'
         app.mkdir(parents=True)
-        executable = app / 'antigravity'
+        executable = app / 'obsidian'
         executable.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
         executable.chmod(0o755)
-        installer.create_launchers(self.home, root, {'antigravity': app})
-        launcher = self.home / '.local/bin/antigravity-wsl'
+        installer.create_launchers(self.home, root, {'obsidian': app})
+        launcher = self.home / '.local/bin/obsidian-wsl'
         fake_bin = self.home / 'fake-bin'
         fake_bin.mkdir()
         for command in ('systemctl', 'ibus'):
@@ -49,11 +49,11 @@ class InstallerTests(unittest.TestCase):
         env = dict(os.environ, PATH=str(fake_bin) + ':' + os.environ['PATH'])
         result = subprocess.check_output([str(launcher), 'note with spaces', '$(false)'], text=True, env=env)
         self.assertEqual(result, '--ozone-platform=x11\nnote with spaces\n$(false)\n')
-        desktop = self.home / '.local/share/applications/antigravity-wsl.desktop'
+        desktop = self.home / '.local/share/applications/obsidian-wsl.desktop'
         self.assertIn('%%percent', desktop.read_text())
         if __import__('shutil').which('desktop-file-validate'):
             subprocess.run(['desktop-file-validate', str(desktop)], check=True)
-        installer.create_launchers(self.home, root, {'antigravity': app})
+        installer.create_launchers(self.home, root, {'obsidian': app})
         # A failed input service must not launch the application without an IME.
         (fake_bin / 'systemctl').write_text('#!/bin/sh\nexit 1\n')
         failed = subprocess.run([str(launcher)], env=env, capture_output=True, text=True)
@@ -115,7 +115,7 @@ class InstallerTests(unittest.TestCase):
         source.rename(target)
         self.assertEqual(installer.download('obsidian', {'sha256': expected}, cache, True), target)
         with self.assertRaisesRegex(RuntimeError, 'Offline cache miss'):
-            installer.download('antigravity', {'sha256': expected}, cache, True)
+            installer.download('obsidian', {'sha256': 'f' * 64}, cache, True)
 
 
 if __name__ == '__main__':

@@ -22,9 +22,8 @@ check('WSLg', Path('/mnt/wslg').exists() and bool(os.getenv('DISPLAY') or os.get
 print('INFO: GPU device:', 'present' if Path('/dev/dxg').exists() else 'not visible; rendering needs checking')
 for cmd in ('curl', 'python3', 'dpkg-deb', 'xdg-mime', 'fc-match', 'ibus', 'ibus-daemon', 'gsettings', 'dconf'):
     check(cmd, bool(shutil.which(cmd)), shutil.which(cmd) or 'run scripts/install-deps.sh')
-for name in ('antigravity', 'obsidian'):
-    path = home / '.local/bin' / (name + '-wsl')
-    check(name + ' launcher', path.is_file(), str(path))
+path = home / '.local/bin/obsidian-wsl'
+check('obsidian launcher', path.is_file(), str(path))
 record = home / '.local/share/wsl-notes/install.json'
 if record.exists():
     data = json.loads(record.read_text())
@@ -63,6 +62,6 @@ if tools_record.exists():
     check('slides launcher', launcher.is_file(), str(launcher))
 else:
     print('INFO: document/slide tools not installed (skipped or --no-tools); run ./setup.sh to add them.')
-print('Manual check: type Korean using Hangul/Right Alt or Shift+Space in each app.')
-print('Manual check: login → Notes project → Local mode → create Inbox/test.md → view in Obsidian.')
+print('Manual check: type Korean using Hangul/Right Alt or Shift+Space in Obsidian (WSLg).')
+print('Manual check: Windows Antigravity → connect to this WSL distro → open the vault → create a test note → view in Obsidian.')
 sys.exit(0 if all(checks) else 1)

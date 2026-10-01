@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""User-local WSLg installation. Python standard library only."""
+"""User-local WSLg installation of Obsidian. Python standard library only."""
 import argparse
 import hashlib
 import json
@@ -9,7 +9,6 @@ import platform
 import posixpath
 import shlex
 import shutil
-import struct
 import subprocess
 import sys
 import tarfile
@@ -50,7 +49,7 @@ def digest(path):
 
 def download(name, spec, cache, offline=False):
     cache.mkdir(parents=True, exist_ok=True)
-    suffix = spec.get('suffix') or ('.tar.gz' if name == 'antigravity' else '.deb')
+    suffix = spec.get('suffix') or '.deb'
     path = cache / (name + '-' + spec['sha256'] + suffix)
     if path.exists():
         if digest(path) != spec['sha256']:
@@ -90,15 +89,6 @@ def safe_extract(archive, destination, mode='r:gz'):
             source.extractall(destination)
 
 
-def extract_icon(asar, target):
-    with asar.open('rb') as source:
-        header = struct.unpack('<4I', source.read(16))
-        tree = json.loads(source.read(header[3]))
-        entry = tree['files']['icon.png']
-        source.seek(8 + header[1] + int(entry['offset']))
-        target.write_bytes(source.read(entry['size']))
-
-
 def install_app(name, spec, archive, root):
     target = root / 'apps' / name / spec['version']
     expected = {'version': spec['version'], 'sha256': spec['sha256']}
@@ -110,13 +100,8 @@ def install_app(name, spec, archive, root):
     target.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.install-', dir=target.parent) as temp:
         staging = Path(temp)
-        if name == 'antigravity':
-            safe_extract(archive, staging)
-            source = staging / 'Antigravity-x64'
-            extract_icon(source / 'resources/app.asar', source / 'icon.png')
-        else:
-            subprocess.run(['dpkg-deb', '-x', str(archive), str(staging)], check=True)
-            source = staging / 'opt/Obsidian'
+        subprocess.run(['dpkg-deb', '-x', str(archive), str(staging)], check=True)
+        source = staging / 'opt/Obsidian'
         binary = source / name
         if not binary.is_file():
             raise RuntimeError(f'Expected application binary missing: {binary}')
@@ -199,8 +184,6 @@ if uri.startswith(('http://', 'https://')):
     windows = subprocess.check_output(['cmd.exe', '/d', '/c', 'echo %SystemRoot%'], cwd='/mnt/c', stderr=subprocess.DEVNULL).decode().strip()
     windows = subprocess.check_output(['wslpath', '-u', windows], text=True).strip()
     command = [str(Path(windows)/'System32/rundll32.exe'), 'url.dll,FileProtocolHandler', uri]
-elif uri.startswith('antigravity://'):
-    command = [str(Path.home()/'.local/bin/antigravity-wsl'), uri]
 elif uri.startswith('obsidian://'):
     command = [str(Path.home()/'.local/bin/obsidian-wsl'), uri]
 else:
@@ -215,7 +198,7 @@ os.execv(command[0], command)
         wrapper += 'exec ' + shlex.quote(str(private_bin / 'wsl-notes-ime')) + ' '
         wrapper += shlex.quote(str(target / name)) + ' --ozone-platform=x11 "$@"\n'
         managed_write(binary, wrapper, 0o755)
-        icon = target / ('icon.png' if name == 'antigravity' else 'resources/icon.png')
+        icon = target / 'resources/icon.png'
         desktop = '[Desktop Entry]\n' + MARKER + '\nType=Application\n'
         desktop += f'Name={name.capitalize()} (WSL)\nExec={desktop_quote(binary)} %U\n'
         desktop += f'Icon={desktop_value(icon)}\nTerminal=false\nCategories=Office;\n'
@@ -229,8 +212,8 @@ def starter_note(vault):
 
 보관함 경로: `{vault}`
 
-1. Antigravity에서 로그인 후 프로젝트 폴더로 위 경로를 선택합니다.
-2. Local 환경에서 `Inbox/첫 메모.md에 오늘의 아이디어를 정리해 줘`처럼 요청합니다.
+1. Windows의 Antigravity에서 로그인하고 Windows Subsystem for Linux로 이 배포판에 연결합니다.
+2. 연결된 상태에서 위 경로를 프로젝트 폴더로 열고 `Inbox/첫 메모.md에 오늘의 아이디어를 정리해 줘`처럼 요청합니다.
 3. Obsidian에서 작성된 Markdown 파일을 확인합니다.
 
 새 메모는 `Inbox`, 일일 노트는 `Daily`, 첨부 파일은 `Attachments`에 저장합니다.
@@ -364,11 +347,10 @@ def main():
                                                   'test_note_folder': profile_info['test_note_folder'],
                                                   'template_revision': profile_info.get('template_revision'),
                                                   'vault_registered': registered}, indent=2) + '\n')
-    print('\nInstallation complete. Launch from the Windows Start menu, or:')
-    print(home / '.local/bin/antigravity-wsl')
+    print('\nInstallation complete. Launch Obsidian from the Windows Start menu, or:')
     print(home / '.local/bin/obsidian-wsl')
-    print('In Antigravity: sign in, create a project, choose this folder:', vault)
-    print('Use Local mode. Authentication and folder selection are manual.')
+    print('In Windows Antigravity: sign in, connect to this WSL distribution, open this folder:', vault)
+    print('Antigravity runs on Windows and is not installed by this repository.')
 
 
 if __name__ == '__main__':
