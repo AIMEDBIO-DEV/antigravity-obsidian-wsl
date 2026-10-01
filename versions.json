@@ -1,9 +1,4 @@
 {
-  "antigravity": {
-    "version": "2.12.2",
-    "url": "https://storage.googleapis.com/antigravity-public/antigravity-hub/2.12.2-6298742303883264/linux-x64/Antigravity.tar.gz",
-    "sha256": "fc2e2af49a45aefee9558bce56aaa4bbde00d560d354357af1b834a9dd43cd33"
-  },
   "obsidian": {
     "version": "1.13.7",
     "url": "https://github.com/obsidianmd/obsidian-releases/releases/download/v1.13.7/obsidian_1.13.7_amd64.deb",

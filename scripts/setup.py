@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install, register Windows shortcuts, check, and open the WSL Notes apps."""
+"""Install Obsidian, register Windows shortcuts, check, and open Obsidian (Antigravity runs on Windows via its WSL connection)."""
 import argparse
 import json
 import os
@@ -31,7 +31,7 @@ def finish(home, distribution, powershell):
     welcome = data.get('welcome_note', info['welcome_note'])
     if Path(welcome).is_absolute() or '..' in Path(welcome).parts:
         raise RuntimeError('Invalid welcome note path')
-    pending = ['desktop_login', 'antigravity_local_project', 'physical_keyboard', 'note_round_trip'] + info['user_checks']
+    pending = ['antigravity_wsl_connect', 'antigravity_vault_open', 'physical_keyboard', 'note_round_trip'] + info['user_checks']
     tools_record = root / 'tools-install.json'
     tools = json.loads(tools_record.read_text()) if tools_record.exists() else None
     if tools and tools.get('complete'):
@@ -56,7 +56,7 @@ def finish(home, distribution, powershell):
     uri = 'obsidian://open?' + urllib.parse.urlencode(
         {'path': str(vault / welcome)}, quote_via=urllib.parse.quote)
     processes = {}
-    for name, args in (('obsidian', [uri]), ('antigravity', [])):
+    for name, args in (('obsidian', [uri]),):
         with (logs / (name + '-setup.log')).open('a') as log:
             child = subprocess.Popen([str(home / '.local/bin' / (name + '-wsl')), *args],
                                      stdin=subprocess.DEVNULL, stdout=log,
@@ -75,19 +75,20 @@ def finish(home, distribution, powershell):
     report_path = root / 'setup-status.json'
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')
     print('\n자동 설정 완료. 전체 사용 확인은 아직 남아 있습니다.')
-    print('1. Antigravity 데스크톱 앱에서 본인 계정으로 로그인하세요.')
-    print('2. Create New Project → New Project에서 다음 폴더를 선택하고 Local 모드를 사용하세요:')
+    print('1. Windows의 Antigravity 2.0에서 본인 계정으로 로그인하세요.')
+    print('2. Windows Subsystem for Linux 기능으로 이 WSL 배포판에 연결하세요(연결하면 앱이 해당 배포판으로 다시 시작됩니다).')
+    print('3. 연결된 Antigravity에서 다음 폴더를 프로젝트로 여세요:')
     print(vault)
-    print('3. 앱 입력창에서 한/영 키로 한글을 입력해 보세요.')
-    print(f'4. Antigravity에 {info["test_note_folder"]}/에 새 메모 작성을 요청하고 Obsidian에서 확인하세요.')
+    print('4. Obsidian 입력창에서 한/영 키로 한글을 입력해 보세요.')
+    print(f'5. Antigravity에 {info["test_note_folder"]}/에 새 메모 작성을 요청하고 Obsidian에서 확인하세요.')
     if profile == 'cmc':
         print('CMC: 플러그인 신뢰를 확인한 뒤 Settings → Templater → Trigger Templater on new file creation을 켜세요.')
         print('이 설정은 PC별입니다. 8개 폴더와 Daily의 실제 템플릿 적용까지 확인해야 완료입니다.')
         print('규칙 점검:', vault / 'scripts/validate-vault.sh')
     if tools and tools.get('complete'):
         print('문서·슬라이드 도구:')
-        print('5. officecli로 임시 docx 한 개를 만들고 열어 보세요 (예: officecli create /tmp/test.docx).')
-        print(f'6. {tools["launcher"]} 로 미리보기를 열고, 테마 패널에서 cmc-weekly 데모가 보이는지 확인하세요.')
+        print('6. officecli로 임시 docx 한 개를 만들고 열어 보세요 (예: officecli create /tmp/test.docx).')
+        print(f'7. {tools["launcher"]} 로 미리보기를 열고, 테마 패널에서 cmc-weekly 데모가 보이는지 확인하세요.')
         print('작업공간:', tools['slides'])
     elif tools:
         print('문서·슬라이드 도구 설치가 완료되지 않았습니다. 네트워크 연결 후 ./setup.sh를 다시 실행하세요.')
@@ -99,7 +100,7 @@ def finish(home, distribution, powershell):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--plan', action='store_true', help='Show steps without making changes')
-    parser.add_argument('--finish-only', action='store_true', help='Resume shortcut/check/app steps after installation')
+    parser.add_argument('--finish-only', action='store_true', help='Resume shortcut/check/Obsidian steps after installation')
     parser.add_argument('--profile', choices=('minimal', 'cmc'))
     parser.add_argument('--vault', type=Path)
     parser.add_argument('--cache', type=Path)
@@ -126,8 +127,8 @@ def main(argv=None):
             run([sys.executable, REPO / 'scripts/install.py', '--plan', *install_args])
             if not args.no_tools:
                 run([sys.executable, REPO / 'scripts/tools.py', '--plan', *tools_args])
-        print('Steps: dependencies → apps/vault/IME → officecli/Node/open-slide (skip: --no-tools) → hidden Windows shortcuts → checks → open apps')
-        print('Then guide desktop login → Local project → physical Korean input → note round trip.')
+        print('Steps: dependencies → Obsidian/vault/IME → officecli/Node/open-slide (skip: --no-tools) → hidden Windows shortcut → checks → open Obsidian')
+        print('Then guide Windows Antigravity login → WSL connect → open vault → physical Korean input in Obsidian → note round trip.')
         return
     if os.geteuid() == 0:
         raise RuntimeError('Run ./setup.sh as the normal WSL user, not sudo/root.')

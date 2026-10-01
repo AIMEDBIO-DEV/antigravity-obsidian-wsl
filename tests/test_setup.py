@@ -120,7 +120,10 @@ class SetupTests(unittest.TestCase):
             self.assertNotIn('내', uri)
             self.assertTrue(report['automation_complete'])
             self.assertEqual(len(report['user_checks_pending']), 4)
-            self.assertTrue(report['apps']['antigravity']['launch_requested'])
+            self.assertEqual(list(report['apps']), ['obsidian'])
+            self.assertTrue(report['apps']['obsidian']['launch_requested'])
+            self.assertIn('antigravity_wsl_connect', report['user_checks_pending'])
+            self.assertEqual(popen.call_count, 1)
             # A failed retry must not leave the previous automation success report.
             with patch.object(setup, 'run', side_effect=subprocess.CalledProcessError(1, 'shortcut')), \
                  patch.object(setup.subprocess, 'check_output', return_value='C:\\script.ps1\n'), \

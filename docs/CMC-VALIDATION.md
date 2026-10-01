@@ -17,8 +17,8 @@ WSL Ubuntu에서 Obsidian 1.13.7과 고정된 Templater 2.25.0을 사용했다.
 
 ## 다른 PC에서 남는 확인
 
-새 PC의 WSL 설치부터 agy CLI/데스크톱 로그인까지 전체 재설치는 이번 검증 범위가 아니다.
-실제 물리 한/영 키, Antigravity Local 프로젝트와 노트 작성 왕복은 해당 PC에서 확인해야 한다.
+새 PC의 WSL 설치부터 agy CLI 로그인, Windows Antigravity 설치까지 전체 재설치는 이번 검증 범위가 아니다.
+실제 물리 한/영 키, Antigravity WSL 연결·보관함 열기와 노트 작성 왕복은 해당 PC에서 확인해야 한다.
 입력기 코드는 이번 보완에서 변경하지 않았다. 합성 키 입력은 물리 키보드 검증으로 대체하지 않는다.
 
 `./setup.sh --profile cmc` 이후 AGENTS.md와 보관함 SETUP.md에 따라 플러그인 신뢰,

@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$Distribution,
-    [ValidateSet('antigravity', 'obsidian', 'all')][string]$App = 'all',
+    [ValidateSet('obsidian', 'all')][string]$App = 'all',
     [switch]$VerifyOnly
 )
 $ErrorActionPreference = 'Stop'
@@ -61,7 +61,7 @@ try {
 if ($VerifyOnly) { return }
 $launcherDirectory = Join-Path $env:LOCALAPPDATA 'WSL Notes\Launchers'
 New-Item -ItemType Directory -Force -Path $launcherDirectory | Out-Null
-$names = if ($App -eq 'all') { @('antigravity', 'obsidian') } else { @($App) }
+$names = if ($App -eq 'all') { @('obsidian') } else { @($App) }
 foreach ($name in $names) {
     $launcher = "$linuxHome/.local/bin/$name-wsl"
     & $wsl --distribution $Distribution --user $linuxUser --exec test -x $launcher
