@@ -19,6 +19,24 @@ Windows 사용자 이름과 Linux 사용자 이름이 달라도 됩니다.
 - **Windows에 Antigravity 2.0이 설치되어 있어야 합니다.** 설치는 이 저장소의 범위가 아니며 사용자가 직접 합니다.
 - Antigravity 로그인에 사용할 본인 계정이 필요합니다. 기업 계정은 조직의 제품 이용 권한이 필요합니다.
 
+## 빠른 설치 (명령 한 줄)
+
+WSL Ubuntu와 Windows용 Antigravity 2.0이 설치되어 있으면, **Ubuntu 터미널에서 아래 한 줄**로 나머지 자동 설치를 끝낼 수 있습니다.
+Antigravity CLI(`agy`)나 Git 인증 준비는 필요 없습니다.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AIMEDBIO-DEV/antigravity-obsidian-wsl/main/bootstrap.sh | bash
+```
+
+- 처음 설치할 때 보관함 구성(minimal/cmc)을 묻고, sudo 암호를 **한 번** 묻습니다.
+- 저장소를 `~/apps/antigravity-obsidian-wsl`에 내려받고(이미 있으면 갱신) `./setup.sh`를 실행합니다.
+- 옵션은 그대로 `setup.sh`에 전달됩니다. 예: `curl -fsSL …/bootstrap.sh | bash -s -- --profile cmc --no-tools`
+- 저장소에 로컬 변경이 있으면 갱신하지 않고 그대로 사용합니다. 기존 노트는 건드리지 않습니다.
+
+자동 설치 후에도 **Antigravity 로그인·WSL 연결·보관함 열기**, (CMC) **플러그인 신뢰·Templater 자동 실행 허용**,
+**Obsidian 한글 입력 확인**은 직접 진행합니다. 설치 마지막에 출력되는 안내와 아래 [5. 앱 실행과 최초 연결](#5-앱-실행과-최초-연결)을 따르세요.
+설치부터 사용 확인까지 대화로 안내받으려면 아래 CLI 방식을 사용합니다.
+
 ## 설치 흐름과 역할
 
 **선행 준비 → 저장소 내려받기 → Antigravity CLI에 한 번 설치 요청**으로 진행합니다.
@@ -384,7 +402,7 @@ X11 및 IBus 환경에서 앱을 실행합니다. WSL 재시작 후에도 바로
 
 ```bash
 python3 -m unittest discover -s tests -v
-bash -n setup.sh install.sh scripts/install-deps.sh scripts/wsl-notes-ime.sh
+bash -n bootstrap.sh setup.sh install.sh scripts/install-deps.sh scripts/wsl-notes-ime.sh
 # WSLg에서 설치 후 실제 입력 엔진 조합 검증 (Obsidian 입력창과 별도 컨텍스트)
 /usr/bin/python3 scripts/verify-korean-input.py
 /usr/bin/python3 scripts/verify-korean-input.py Alt_R
