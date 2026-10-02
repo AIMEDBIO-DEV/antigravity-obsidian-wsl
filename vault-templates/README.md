@@ -5,7 +5,7 @@
 규칙에는 폴더별 노트 종류, frontmatter 필수 항목, 태그 allowlist, 검증 스크립트가 들어 있습니다.
 
 팀 번들은 `./setup.sh --profile cmc`로 앱 설치와 함께 적용합니다.
-일반 빈 보관함은 `--profile minimal`이며 처음 설치할 때 프로필을 생략하면 minimal입니다.
+일반 빈 보관함은 `--profile minimal`입니다. 처음 설치할 때 프로필을 생략하면 cmc입니다.
 재설치는 install.json에 기록된 프로필과 보관함을 유지합니다.
 
 ## 템플릿 목록

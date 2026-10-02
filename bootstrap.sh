@@ -2,8 +2,9 @@
 # One-command installer for WSL Ubuntu. Downloads (or updates) this repository and runs setup.sh.
 #
 #   curl -fsSL https://raw.githubusercontent.com/AIMEDBIO-DEV/antigravity-obsidian-wsl/main/bootstrap.sh | bash
-#   curl -fsSL .../bootstrap.sh | bash -s -- --profile cmc
+#   curl -fsSL .../bootstrap.sh | bash -s -- --profile minimal
 #
+# The vault profile defaults to cmc on a first install; reinstalls keep the saved one.
 # Any arguments are passed to setup.sh. Run as the normal Linux user, not with sudo.
 set -euo pipefail
 
@@ -12,14 +13,12 @@ main() {
   local repo_url="${WSL_NOTES_REPO_URL:-https://github.com/AIMEDBIO-DEV/antigravity-obsidian-wsl.git}"
   local branch="${WSL_NOTES_BRANCH:-main}"
   local target="${WSL_NOTES_DIR:-$HOME/apps/antigravity-obsidian-wsl}"
-  local args=("$@") plan=false offline=false has_profile=false arg
+  local args=("$@") plan=false offline=false arg
 
   for arg in "${args[@]}"; do
     case "$arg" in
       --plan) plan=true ;;
       --offline) offline=true ;;
-      --profile|--profile=*) has_profile=true ;;
-      --finish-only) has_profile=true ;;
     esac
   done
 
@@ -32,20 +31,6 @@ main() {
   fi
   if (( EUID == 0 )); then
     echo 'Run as your normal Linux user, not root or sudo. The script asks for the sudo password itself.' >&2; return 1
-  fi
-
-  # Ask once for the CMC/minimal profile on a first install; reinstalls keep the saved profile.
-  if ! $has_profile && ! $plan && [[ ! -f "$HOME/.local/share/wsl-notes/install.json" ]] \
-      && { : </dev/tty; } 2>/dev/null; then
-    local choice
-    echo '보관함 구성을 고르세요.'
-    echo '  1) minimal: 빈 보관함 (기본)'
-    echo '  2) cmc: CMC 팀 구조·규칙·템플릿 포함'
-    read -r -p '번호 [1]: ' choice </dev/tty || choice=1
-    case "${choice:-1}" in
-      2) args+=(--profile cmc) ;;
-      *) args+=(--profile minimal) ;;
-    esac
   fi
 
   # Ask for the sudo password up front so the rest runs without stopping (dependencies use apt).

@@ -288,7 +288,8 @@ def select_profile(home, requested=None, vault_override=None):
     profiles = json.loads((REPO / 'vault-templates/profiles.json').read_text())
     record = home / '.local/share/wsl-notes/install.json'
     previous = json.loads(record.read_text()) if record.exists() else {}
-    name = requested or previous.get('profile', 'minimal')
+    # First installs default to CMC; records from before profiles existed are minimal.
+    name = requested or (previous.get('profile', 'minimal') if previous else 'cmc')
     if name not in profiles:
         raise RuntimeError(f'Unknown profile: {name}')
     info = profiles[name]
@@ -310,7 +311,7 @@ def create_profile_vault(vault, profile, cache, offline):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--profile', choices=('minimal', 'cmc'), help='CMC includes team rules; default keeps the previous profile or minimal')
+    parser.add_argument('--profile', choices=('minimal', 'cmc'), help='CMC includes team rules; default keeps the previous profile or cmc')
     parser.add_argument('--vault', type=Path, help='Default: previous vault, or ~/Obsidian/Notes')
     parser.add_argument('--cache', type=Path, help='Default: ~/.cache/wsl-notes')
     parser.add_argument('--offline', action='store_true', help='Require previously verified cache files')
