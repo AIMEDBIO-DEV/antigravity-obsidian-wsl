@@ -23,8 +23,9 @@ class BootstrapTests(unittest.TestCase):
         self.remote = Path(self.tmp.name) / 'remote'
         subprocess.run(['git', 'clone', '--quiet', str(REPO), str(self.remote)], check=True)
         subprocess.run(['cp', str(BOOTSTRAP), str(self.remote / 'bootstrap.sh')], check=True)
-        self.branch = subprocess.run(['git', '-C', str(self.remote), 'branch', '--show-current'],
-                                     capture_output=True, text=True, check=True).stdout.strip()
+        # CI checks out a detached merge commit, so pin a named branch for the clone to track.
+        self.branch = 'bootstrap-test'
+        subprocess.run(['git', '-C', str(self.remote), 'checkout', '--quiet', '-B', self.branch], check=True)
 
     def tearDown(self):
         self.tmp.cleanup()
