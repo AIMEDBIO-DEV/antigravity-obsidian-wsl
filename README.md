@@ -28,9 +28,10 @@ Antigravity CLI(`agy`)나 Git 인증 준비는 필요 없습니다.
 curl -fsSL https://raw.githubusercontent.com/AIMEDBIO-DEV/antigravity-obsidian-wsl/main/bootstrap.sh | bash
 ```
 
-- 처음 설치할 때 보관함 구성(minimal/cmc)을 묻고, sudo 암호를 **한 번** 묻습니다.
+- 보관함 구성은 묻지 않고 **cmc**(CMC 팀 구조·규칙·템플릿)로 설치합니다. 빈 보관함은 `bash -s -- --profile minimal`로 지정합니다.
+- sudo 암호를 **한 번** 묻습니다.
 - 저장소를 `~/apps/antigravity-obsidian-wsl`에 내려받고(이미 있으면 갱신) `./setup.sh`를 실행합니다.
-- 옵션은 그대로 `setup.sh`에 전달됩니다. 예: `curl -fsSL …/bootstrap.sh | bash -s -- --profile cmc --no-tools`
+- 옵션은 그대로 `setup.sh`에 전달됩니다. 예: `curl -fsSL …/bootstrap.sh | bash -s -- --profile minimal --no-tools`
 - 저장소에 로컬 변경이 있으면 갱신하지 않고 그대로 사용합니다. 기존 노트는 건드리지 않습니다.
 
 자동 설치 후에도 **Antigravity 로그인·WSL 연결·보관함 열기**, (CMC) **플러그인 신뢰·Templater 자동 실행 허용**,
@@ -191,7 +192,7 @@ chmod +x setup.sh install.sh scripts/install-deps.sh
 
 CMC 프로필은 기본적으로 minimal과 같은 `~/Obsidian/Notes`에 규칙·템플릿·애드온을 적용하고 그 보관함을 등록합니다.
 시작 문서는 `SETUP.md`, 새 참고 노트 폴더는 `References`입니다.
-일반 보관함은 `--profile minimal`입니다. 재설치는 저장된 프로필/경로를 유지합니다.
+처음 설치할 때 프로필을 생략하면 cmc입니다. 일반 빈 보관함은 `--profile minimal`입니다. 재설치는 저장된 프로필/경로를 유지합니다.
 `--finish-only`는 저장된 프로필의 시작 문서와 검증 항목을 이어갑니다.
 
 CMC 첫 실행에서는 플러그인 사용 허용과 **Templater 자동 실행의 PC별 허용**이 필요합니다.
@@ -348,6 +349,9 @@ python3 scripts/doctor.py
 - **라이브러리 누락:** `./scripts/install-deps.sh`를 실행한 뒤 다시 설치합니다.
 - **한글이 네모로 표시:** 의존성 설치 후 Obsidian을 종료하고 다시 실행합니다.
   한글 표시용 글꼴과 입력기는 별개입니다. 입력이 안 되면 아래 한글 입력 항목을 확인하세요.
+- **창이 작업표시줄에만 뜨고 화면에 안 보임:** 일부 PC에서는 WSL의 systemd가 WSLg 화면 출력을 막습니다.
+  `/etc/wsl.conf`의 `[boot]`에 `systemd=false`를 두고 Windows에서 `wsl --shutdown` 후 다시 엽니다.
+  한글 입력기는 systemd 없이도 동작합니다.
 - **검은 화면/Wayland 문제:** 일회성으로 `~/.local/bin/obsidian-wsl --ozone-platform=x11`을 시도합니다.
 - **sandbox 오류:** root로 실행하지 마세요. `--no-sandbox`를 기본 실행 옵션으로 추가하지 않습니다.
   배포판의 AppArmor/user namespace 정책은 관리자와 확인하세요.
@@ -376,6 +380,8 @@ Antigravity는 이 저장소 밖(Windows 앱)이므로 문제 해결은 해당 �
 이 입력기는 WSLg로 실행하는 **Obsidian**용입니다. Windows의 Antigravity는 Windows 입력기를 사용합니다.
 Obsidian 실행 명령은 사용자 서비스 `wsl-notes-ibus.service`를 자동으로 시작하고
 X11 및 IBus 환경에서 앱을 실행합니다. WSL 재시작 후에도 바로가기 실행으로 적용됩니다.
+`/etc/wsl.conf`에서 systemd를 끈 환경(`[boot] systemd=false`)에서는 사용자 서비스 대신
+세션 D-Bus와 `ibus-daemon`을 직접 시작합니다. 모드는 실행 시 자동으로 판단합니다.
 
 1. 설정 변경 후 실행 중인 Obsidian을 완전히 종료하고 바로가기로 다시 엽니다.
 2. Windows 입력 상태를 영문으로 둡니다.

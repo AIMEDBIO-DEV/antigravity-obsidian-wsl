@@ -197,6 +197,8 @@ class VaultTemplateTests(unittest.TestCase):
 
     def test_profile_selection_preserves_previous_vault_on_reinstall(self):
         installer = vault_tool.installer()
+        name, _, _ = installer.select_profile(self.home)
+        self.assertEqual(name, 'cmc')
         name, info, path = installer.select_profile(self.home, 'cmc')
         self.assertEqual(path, self.home / 'Obsidian/Notes')
         self.assertEqual(info['welcome_note'], 'SETUP.md')
@@ -208,6 +210,10 @@ class VaultTemplateTests(unittest.TestCase):
         self.assertEqual(path, self.vault)
         name, _, path = installer.select_profile(self.home, 'minimal')
         self.assertEqual(path, self.home / 'Obsidian/Notes')
+        # Records written before profiles existed keep the minimal vault.
+        record.write_text(json.dumps({'vault': str(self.vault)}))
+        name, _, path = installer.select_profile(self.home)
+        self.assertEqual((name, path), ('minimal', self.vault))
 
 
 if __name__ == '__main__':

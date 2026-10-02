@@ -46,7 +46,7 @@ class InstallerTests(unittest.TestCase):
             executable = fake_bin / command
             executable.write_text('#!/bin/sh\nexit 0\n')
             executable.chmod(0o755)
-        env = dict(os.environ, PATH=str(fake_bin) + ':' + os.environ['PATH'])
+        env = dict(os.environ, PATH=str(fake_bin) + ':' + os.environ['PATH'], WSL_NOTES_IME_MODE='systemd')
         result = subprocess.check_output([str(launcher), 'note with spaces', '$(false)'], text=True, env=env)
         self.assertEqual(result, '--ozone-platform=x11\nnote with spaces\n$(false)\n')
         desktop = self.home / '.local/share/applications/obsidian-wsl.desktop'
@@ -57,6 +57,58 @@ class InstallerTests(unittest.TestCase):
         # A failed input service must not launch the application without an IME.
         (fake_bin / 'systemctl').write_text('#!/bin/sh\nexit 1\n')
         failed = subprocess.run([str(launcher)], env=env, capture_output=True, text=True)
+        self.assertNotEqual(failed.returncode, 0)
+        self.assertEqual(failed.stdout, '')
+
+    def test_input_method_direct_mode_without_systemd(self):
+        root = self.home / '.local/share/wsl-notes'
+        installer.create_input_method(self.home, root)
+        helper = root / 'bin/wsl-notes-ime'
+        # Plain path: the fake ibus-daemon path is substituted into the helper source.
+        plain = tempfile.TemporaryDirectory()
+        self.addCleanup(plain.cleanup)
+        fake_bin = Path(plain.name)
+        log = self.home / 'calls.log'
+        scripts = {
+            # No reachable bus yet, so the helper must start one.
+            'dbus-send': 'exit 1',
+            'dbus-daemon': 'echo "dbus-daemon $*" >> "$LOG"',
+            'pgrep': 'exit 1',
+            'pkill': 'echo "pkill $*" >> "$LOG"; exit 1',
+            'ibus': 'exit 0',
+            'systemctl': 'echo systemctl >> "$LOG"; exit 1',
+        }
+        for command, body in scripts.items():
+            (fake_bin / command).write_text('#!/bin/sh\n' + body + '\n')
+            (fake_bin / command).chmod(0o755)
+        runtime = self.home / 'runtime'
+        env = dict(os.environ, PATH=str(fake_bin) + ':' + os.environ['PATH'], LOG=str(log),
+                   XDG_RUNTIME_DIR=str(runtime), WSL_NOTES_IME_MODE='direct')
+        # ibus-daemon is called by absolute path; point the helper copy at a fake one.
+        fake_daemon = fake_bin / 'ibus-daemon'
+        fake_daemon.write_text('#!/bin/sh\necho "ibus-daemon $*" >> "$LOG"\n')
+        fake_daemon.chmod(0o755)
+        helper.write_text(helper.read_text().replace('/usr/bin/ibus-daemon', str(fake_daemon)))
+        output = subprocess.check_output(
+            [str(helper), 'sh', '-c', 'printf "%s %s" "$WSL_NOTES_IME_MODE" "$DBUS_SESSION_BUS_ADDRESS"'],
+            text=True, env=env)
+        self.assertEqual(output, f'direct unix:path={runtime}/bus')
+        calls = log.read_text()
+        self.assertIn(f'dbus-daemon --session --address=unix:path={runtime}/bus --fork', calls)
+        self.assertIn(f'ibus-daemon --address=unix:abstract=wsl-notes-ibus-{os.getuid()} --xim', calls)
+        self.assertNotIn('systemctl', calls)
+        self.assertNotIn('pkill', calls)
+        # The installer restarts the direct daemon so new settings apply.
+        log.write_text('')
+        subprocess.run([str(helper), 'true'], env=dict(env, WSL_NOTES_IME_RESTART='1'), check=True)
+        self.assertIn('pkill -u', log.read_text())
+        # Bus-only calls (installer settings) do not start IBus.
+        log.write_text('')
+        subprocess.run([str(helper), 'true'], env=dict(env, WSL_NOTES_IME_BUS_ONLY='1'), check=True)
+        self.assertNotIn('ibus-daemon', log.read_text())
+        # A failed IBus start must not launch the application without an IME.
+        fake_daemon.write_text('#!/bin/sh\nexit 1\n')
+        failed = subprocess.run([str(helper), 'echo', 'launched'], env=env, capture_output=True, text=True)
         self.assertNotEqual(failed.returncode, 0)
         self.assertEqual(failed.stdout, '')
 

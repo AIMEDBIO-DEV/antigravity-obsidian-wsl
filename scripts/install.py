@@ -144,7 +144,12 @@ RestartSec=2
 
 
 def configure_input_method(home, root):
-    env = dict(os.environ, DBUS_SESSION_BUS_ADDRESS=f'unix:path=/run/user/{os.getuid()}/bus')
+    helper = str(root / 'bin/wsl-notes-ime')
+    # The helper picks systemd or direct mode and prepares the session bus for either.
+    mode, bus = subprocess.check_output(
+        [helper, 'sh', '-c', 'printf "%s\\n%s" "$WSL_NOTES_IME_MODE" "$DBUS_SESSION_BUS_ADDRESS"'],
+        text=True, env=dict(os.environ, WSL_NOTES_IME_BUS_ONLY='1')).split('\n')
+    env = dict(os.environ, DBUS_SESSION_BUS_ADDRESS=bus, WSL_NOTES_IME_MODE=mode)
     settings = {
         'org.freedesktop.ibus.general': {
             'preload-engines': "['hangul']", 'engines-order': "['hangul']",
@@ -165,9 +170,14 @@ def configure_input_method(home, root):
     for schema, keys in settings.items():
         for key, value in keys.items():
             subprocess.run(['gsettings', 'set', schema, key, value], check=True, env=env)
-    subprocess.run(['systemctl', '--user', 'daemon-reload'], check=True, env=env)
-    subprocess.run(['systemctl', '--user', 'restart', 'wsl-notes-ibus.service'], check=True, env=env)
-    subprocess.run([str(root / 'bin/wsl-notes-ime'), '/usr/bin/true'], check=True, env=env)
+    if mode == 'systemd':
+        subprocess.run(['systemctl', '--user', 'daemon-reload'], check=True, env=env)
+        subprocess.run(['systemctl', '--user', 'restart', 'wsl-notes-ibus.service'], check=True, env=env)
+    else:
+        # systemd=false: restart the directly started IBus so it reads the new settings.
+        env['WSL_NOTES_IME_RESTART'] = '1'
+    subprocess.run([helper, '/usr/bin/true'], check=True, env=env)
+    return mode
 
 
 def create_launchers(home, root, applications):
@@ -269,7 +279,7 @@ def check_environment():
         raise RuntimeError('This release supports x64 PCs only; ARM64 is not yet validated.')
     if not Path('/mnt/wslg').exists() or not (os.getenv('DISPLAY') or os.getenv('WAYLAND_DISPLAY')):
         raise RuntimeError('WSLg is unavailable. Run wsl --update in Windows, then reopen Ubuntu.')
-    for command in ('curl', 'dpkg-deb', 'ldd', 'xdg-mime', 'fc-match', 'ibus', 'ibus-daemon', 'gsettings', 'dconf', 'systemctl', 'timeout'):
+    for command in ('curl', 'dpkg-deb', 'ldd', 'xdg-mime', 'fc-match', 'ibus', 'ibus-daemon', 'gsettings', 'dconf', 'systemctl', 'dbus-daemon', 'dbus-send', 'pgrep', 'timeout'):
         if not shutil.which(command):
             raise RuntimeError(f'Missing {command}; run scripts/install-deps.sh first.')
 
@@ -278,7 +288,8 @@ def select_profile(home, requested=None, vault_override=None):
     profiles = json.loads((REPO / 'vault-templates/profiles.json').read_text())
     record = home / '.local/share/wsl-notes/install.json'
     previous = json.loads(record.read_text()) if record.exists() else {}
-    name = requested or previous.get('profile', 'minimal')
+    # First installs default to CMC; records from before profiles existed are minimal.
+    name = requested or (previous.get('profile', 'minimal') if previous else 'cmc')
     if name not in profiles:
         raise RuntimeError(f'Unknown profile: {name}')
     info = profiles[name]
@@ -300,7 +311,7 @@ def create_profile_vault(vault, profile, cache, offline):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--profile', choices=('minimal', 'cmc'), help='CMC includes team rules; default keeps the previous profile or minimal')
+    parser.add_argument('--profile', choices=('minimal', 'cmc'), help='CMC includes team rules; default keeps the previous profile or cmc')
     parser.add_argument('--vault', type=Path, help='Default: previous vault, or ~/Obsidian/Notes')
     parser.add_argument('--cache', type=Path, help='Default: ~/.cache/wsl-notes')
     parser.add_argument('--offline', action='store_true', help='Require previously verified cache files')

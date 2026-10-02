@@ -8,7 +8,7 @@
 1. WSL2/WSLg, x64 Ubuntu, 일반 Linux 사용자, GitHub 접근 준비를 확인한다.
    Windows용 Antigravity 2.0은 사용자가 직접 설치해 둔 것으로 본다. 이 저장소는 설치하지 않으며 설치 흐름도 안내하지 않는다.
 2. `./setup.sh --plan`으로 사용자별 경로와 단계를 확인한다.
-3. 팀 규칙 번들까지 요청받으면 `./setup.sh --profile cmc`를 실행한다. 일반 빈 보관함은 `./setup.sh --profile minimal`을 사용한다. 이 명령이 의존성, Obsidian, 입력기, 보관함, Windows 숨김 바로가기(Obsidian),
+3. 기본은 `./setup.sh --profile cmc`(팀 규칙 번들)이다. 사용자가 빈 보관함을 원할 때만 `./setup.sh --profile minimal`을 사용한다. 이 명령이 의존성, Obsidian, 입력기, 보관함, Windows 숨김 바로가기(Obsidian),
    officecli·Node/pnpm·open-slide 작업공간(`~/Slides`)과 cmc-weekly 테마 설치, doctor 점검, 입력 엔진 검증, Obsidian 실행 요청을 순서대로 수행한다.
    사용자가 도구를 원하지 않으면 `--no-tools`를 붙인다.
    sudo 암호는 사용자가 터미널에서 직접 입력하도록 한다. 대화로 암호를 받지 않는다.
