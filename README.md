@@ -348,6 +348,9 @@ python3 scripts/doctor.py
 - **라이브러리 누락:** `./scripts/install-deps.sh`를 실행한 뒤 다시 설치합니다.
 - **한글이 네모로 표시:** 의존성 설치 후 Obsidian을 종료하고 다시 실행합니다.
   한글 표시용 글꼴과 입력기는 별개입니다. 입력이 안 되면 아래 한글 입력 항목을 확인하세요.
+- **창이 작업표시줄에만 뜨고 화면에 안 보임:** 일부 PC에서는 WSL의 systemd가 WSLg 화면 출력을 막습니다.
+  `/etc/wsl.conf`의 `[boot]`에 `systemd=false`를 두고 Windows에서 `wsl --shutdown` 후 다시 엽니다.
+  한글 입력기는 systemd 없이도 동작합니다.
 - **검은 화면/Wayland 문제:** 일회성으로 `~/.local/bin/obsidian-wsl --ozone-platform=x11`을 시도합니다.
 - **sandbox 오류:** root로 실행하지 마세요. `--no-sandbox`를 기본 실행 옵션으로 추가하지 않습니다.
   배포판의 AppArmor/user namespace 정책은 관리자와 확인하세요.
@@ -376,6 +379,8 @@ Antigravity는 이 저장소 밖(Windows 앱)이므로 문제 해결은 해당 �
 이 입력기는 WSLg로 실행하는 **Obsidian**용입니다. Windows의 Antigravity는 Windows 입력기를 사용합니다.
 Obsidian 실행 명령은 사용자 서비스 `wsl-notes-ibus.service`를 자동으로 시작하고
 X11 및 IBus 환경에서 앱을 실행합니다. WSL 재시작 후에도 바로가기 실행으로 적용됩니다.
+`/etc/wsl.conf`에서 systemd를 끈 환경(`[boot] systemd=false`)에서는 사용자 서비스 대신
+세션 D-Bus와 `ibus-daemon`을 직접 시작합니다. 모드는 실행 시 자동으로 판단합니다.
 
 1. 설정 변경 후 실행 중인 Obsidian을 완전히 종료하고 바로가기로 다시 엽니다.
 2. Windows 입력 상태를 영문으로 둡니다.
