@@ -250,6 +250,26 @@ class ToolsTests(unittest.TestCase):
         self.assertEqual(record['steps']['officecli'], 'failed')
         self.assertEqual(record['steps']['workspace'], 'present')
 
+    def test_workspace_rules_are_appended_once_and_linked_for_antigravity(self):
+        slides = self.workspace()
+        (slides / 'AGENTS.md').write_text('# open-slide\nmy edits')
+        (slides / 'CLAUDE.md').symlink_to('AGENTS.md')
+        self.assertEqual(tools.ensure_workspace_rules(slides), 'added')
+        self.assertEqual(tools.ensure_workspace_rules(slides), 'present')
+        text = (slides / 'AGENTS.md').read_text()
+        self.assertTrue(text.startswith('# open-slide\nmy edits\n'))
+        self.assertEqual(text.count(tools.RULES_MARKER), 1)
+        self.assertIn('officecli view', text)
+        self.assertEqual(Path(slides / 'GEMINI.md').readlink(), Path('AGENTS.md'))
+
+    def test_workspace_rules_keep_user_gemini_file_and_tolerate_missing_agents(self):
+        slides = self.workspace()
+        self.assertEqual(tools.ensure_workspace_rules(slides), 'no-agents-md')
+        (slides / 'AGENTS.md').write_text('rules\n')
+        (slides / 'GEMINI.md').write_text('mine')
+        tools.ensure_workspace_rules(slides)
+        self.assertEqual((slides / 'GEMINI.md').read_text(), 'mine')
+
     def test_plan_changes_nothing(self):
         with patch.object(tools.Path, 'home', return_value=self.home), redirect_stdout(io.StringIO()) as out:
             self.assertIsNone(tools.main(['--plan', '--slides', str(self.home / '내 슬라이드')]))
