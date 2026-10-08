@@ -78,6 +78,10 @@ class ToolsTests(unittest.TestCase):
                                          f'forbidden word (hashed) found in {path}')
                     for asset in re.findall(r"from '\.\./assets/([^']+)'", text):
                         self.assertTrue((bundle / 'assets' / asset).is_file(), f'{asset} missing for {path}')
+                    for asset in re.findall(r"from '@assets/([^']+)'", text):
+                        self.assertTrue((bundle / 'assets' / asset).is_file(), f'@assets/{asset} missing for {path}')
+                    for script in re.findall(r'`(scripts/[\w.-]+)`', text):
+                        self.assertTrue((bundle / script).is_file(), f'{script} missing for {path}')
 
     def test_theme_copies_missing_files_and_never_overwrites(self):
         slides = self.workspace()
@@ -90,6 +94,15 @@ class ToolsTests(unittest.TestCase):
         self.assertEqual(written, [])
         self.assertIn('themes/cmc-weekly.md', kept)
         self.assertEqual((slides / 'themes/cmc-weekly.md').read_text(), 'team edited')
+
+    def test_theme_ships_fonts_and_pptx_table_scripts(self):
+        slides = self.workspace()
+        written, _ = tools.apply_theme(slides, ROOT / 'slide-templates/cmc-weekly')
+        for relative in ('assets/cmc-weekly/image1.png', 'assets/fonts/pretendard/LICENSE.txt',
+                         'assets/fonts/pretendard/Pretendard-Regular.subset.woff2',
+                         'scripts/extract-tables.js', 'scripts/pptx-native-tables.py'):
+            self.assertIn(relative, written)
+            self.assertTrue((slides / relative).is_file())
 
     def test_scaffold_refuses_foreign_folder(self):
         slides = self.home / 'Slides'

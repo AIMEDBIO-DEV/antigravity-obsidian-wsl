@@ -148,7 +148,7 @@ def apply_theme(slides, bundle):
     written, kept = [], []
     for source in sorted(path for path in bundle.rglob('*') if path.is_file()):
         relative = source.relative_to(bundle)
-        if relative.parts[0] not in ('themes', 'assets'):
+        if relative.parts[0] not in ('themes', 'assets', 'scripts'):
             continue
         destination = slides / relative
         if destination.exists():

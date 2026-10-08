@@ -264,7 +264,7 @@ Obsidian에서 `Inbox/첫 메모.md`가 나타나는지 확인합니다.
 | **Node** | `^20.19 \|\| >=22.12` 조건을 만족하는 Node가 PATH에 있으면 그대로 사용합니다. 없으면 [tools.json](tools.json)의 **고정 버전·SHA-256**으로 `~/.local/share/wsl-notes/node/`에 설치합니다. |
 | **pnpm** | 이미 있으면 유지합니다. 없으면 고정 버전을 `~/.local/share/wsl-notes/tools/`에 설치합니다(전역 설정 변경 없음). |
 | **open-slide** | `@open-slide/cli@latest`로 `~/Slides`에 작업공간을 만들고 의존성을 설치합니다(**버전 미고정**). 폴더가 이미 있으면 그대로 두고, open-slide가 아닌 폴더면 중단합니다. |
-| **cmc-weekly 테마** | [slide-templates/](slide-templates/README.md)의 테마·로고를 `~/Slides/themes`, `~/Slides/assets`에 **없는 파일만** 복사합니다. |
+| **cmc-weekly 테마** | [slide-templates/](slide-templates/README.md)의 테마·로고·Pretendard 웹폰트·PPTX 표 변환 스크립트를 `~/Slides/themes`, `~/Slides/assets`, `~/Slides/scripts`에 **없는 파일만** 복사합니다. |
 
 **신뢰 범위:** Obsidian·Node는 해시로 검증하지만 **officecli와 open-slide는 버전을 고정하지 않습니다.**
 officecli는 공식 스크립트를 그대로 신뢰하고 자동 업데이트도 하며, open-slide는 설치 시점의 최신판(`latest`)을 받습니다.
@@ -283,6 +283,7 @@ officecli --version
 
 슬라이드 작업은 `~/Slides`에서 Antigravity CLI(`agy`)를 실행해 요청합니다. 예: “`/create-slide`로 이번 주 주간 보고를 cmc-weekly 테마로 만들어 줘.”
 개발 서버의 **Themes** 패널에서 `cmc-weekly` 데모를 확인할 수 있습니다.
+PPTX로 내보낼 때 표를 PowerPoint에서 편집할 수 있는 표로 바꾸는 방법은 [slide-templates/README.md](slide-templates/README.md#pptx로-내보낼-때-표를-네이티브-표로-바꾸기)를 참고하세요.
 미리보기 브라우저가 자동으로 열리지 않으면 터미널에 표시된 주소를 Windows 브라우저에 직접 입력하세요.
 
 ### 문제 해결
@@ -304,7 +305,7 @@ officecli --version
 | 다운로드 캐시 | `~/.cache/wsl-notes/` |
 | 설치 기록 | `~/.local/share/wsl-notes/install.json` |
 | 기본 보관함 | `~/Obsidian/Notes` |
-| 슬라이드 작업공간 | `~/Slides` (테마: `themes/cmc-weekly.*`, 로고: `assets/image1~3.png`) |
+| 슬라이드 작업공간 | `~/Slides` (테마: `themes/cmc-weekly.*`, 로고: `assets/cmc-weekly/image1~3.png`, 글꼴: `assets/fonts/pretendard/`, 도구: `scripts/`) |
 | 슬라이드 실행 명령 | `~/.local/bin/slides-wsl` |
 | officecli | `~/.local/bin/officecli`, skill: `~/.agents/skills/officecli/` |
 | Node(없을 때만) / pnpm(없을 때만) | `~/.local/share/wsl-notes/node/`, `~/.local/share/wsl-notes/tools/` |
