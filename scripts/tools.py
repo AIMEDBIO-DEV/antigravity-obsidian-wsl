@@ -17,6 +17,7 @@ import install as core  # noqa: E402  (reuses download/verify/extract and the ma
 
 REPO = Path(__file__).resolve().parents[1]
 RECORD = 'tools-install.json'
+OFFICECLI_SKILL_DIRS = ('.gemini/config/skills/officecli/SKILL.md', '.agents/skills/officecli/SKILL.md')
 
 
 def supported_node(version):
@@ -102,14 +103,27 @@ def ensure_officecli(home, spec, offline):
     version = command_output([found, '--version'])
     if not version:
         raise RuntimeError(f'officecli is installed but did not report a version: {found}')
-    skill = home / '.agents/skills/officecli/SKILL.md'
-    if not skill.exists() and not offline:
-        skill.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory() as temp:
-            downloaded = Path(temp) / 'SKILL.md'
-            fetch(spec['skill_url'], downloaded)
-            shutil.copyfile(downloaded, skill)
+    ensure_officecli_skill(home, spec, offline)
     return version, status
+
+
+def ensure_officecli_skill(home, spec, offline):
+    """Antigravity reads global skills from ~/.gemini/config/skills; ~/.agents/skills serves other agents.
+    Missing copies are filled from an existing one (or one download); existing files are never replaced."""
+    targets = [home / relative for relative in OFFICECLI_SKILL_DIRS]
+    missing = [path for path in targets if not path.exists()]
+    if not missing:
+        return
+    with tempfile.TemporaryDirectory() as temp:
+        source = next((path for path in targets if path.exists()), None)
+        if source is None:
+            if offline:
+                return
+            source = Path(temp) / 'SKILL.md'
+            fetch(spec['skill_url'], source)
+        for path in missing:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, path)
 
 
 def scaffold_slides(slides, env, offline):

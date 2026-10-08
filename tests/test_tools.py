@@ -190,6 +190,32 @@ class ToolsTests(unittest.TestCase):
             self.assertEqual(tools.ensure_officecli(self.home, SPECS['officecli'], False), ('1.0.152', 'present'))
         run.assert_not_called()
         self.assertEqual(skill.read_text(), 'local skill')
+        # Antigravity's global skill folder receives a copy of the existing skill, without downloading.
+        self.assertEqual((self.home / '.gemini/config/skills/officecli/SKILL.md').read_text(), 'local skill')
+
+    def test_officecli_skill_downloads_once_for_both_agent_folders(self):
+        def fake_fetch(url, destination):
+            Path(destination).write_text('downloaded skill')
+        with patch.object(tools, 'fetch', side_effect=fake_fetch) as fetch:
+            tools.ensure_officecli_skill(self.home, SPECS['officecli'], False)
+            tools.ensure_officecli_skill(self.home, SPECS['officecli'], False)
+        fetch.assert_called_once()
+        for relative in tools.OFFICECLI_SKILL_DIRS:
+            self.assertEqual((self.home / relative).read_text(), 'downloaded skill')
+
+    def test_officecli_skill_keeps_both_existing_files_and_skips_offline_download(self):
+        with patch.object(tools, 'fetch') as fetch:
+            tools.ensure_officecli_skill(self.home, SPECS['officecli'], True)
+        fetch.assert_not_called()
+        self.assertFalse((self.home / '.gemini').exists())
+        for index, relative in enumerate(tools.OFFICECLI_SKILL_DIRS):
+            (self.home / relative).parent.mkdir(parents=True, exist_ok=True)
+            (self.home / relative).write_text(f'mine {index}')
+        with patch.object(tools, 'fetch') as fetch:
+            tools.ensure_officecli_skill(self.home, SPECS['officecli'], False)
+        fetch.assert_not_called()
+        for index, relative in enumerate(tools.OFFICECLI_SKILL_DIRS):
+            self.assertEqual((self.home / relative).read_text(), f'mine {index}')
 
     def test_officecli_offline_without_binary_is_skipped(self):
         with patch.object(tools.shutil, 'which', return_value=None), patch.object(tools.subprocess, 'run') as run:

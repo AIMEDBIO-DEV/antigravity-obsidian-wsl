@@ -272,7 +272,7 @@ officecli는 공식 스크립트를 그대로 신뢰하고 자동 업데이트�
 기존 작업공간의 open-slide는 `pnpm up @open-slide/core`로 직접 올립니다.
 공식 스크립트는 `~/.local/bin`이 PATH에 없으면 `~/.bashrc`에 PATH 한 줄을 추가합니다.
 스크립트가 감지된 에이전트 폴더에 skill을 넣지만 Antigravity 폴더는 감지하지 못할 수 있으므로,
-설치기가 `~/.agents/skills/officecli/SKILL.md`가 없으면 별도로 내려받아 둡니다(기존 파일은 유지).
+설치기가 Antigravity 전역 경로 `~/.gemini/config/skills/officecli/SKILL.md`와 `~/.agents/skills/officecli/SKILL.md` 중 없는 쪽을 채웁니다. 한쪽에 있으면 그 파일을 복사하고, 둘 다 없으면 내려받습니다(기존 파일은 유지).
 
 ### 사용
 
@@ -321,7 +321,7 @@ officecli --version
 | 슬라이드 작업공간 | `~/Slides` (테마: `themes/cmc-weekly.*`, 로고: `assets/cmc-weekly/image1~3.png`, 글꼴: `assets/fonts/pretendard/`, 도구: `scripts/`) |
 | 슬라이드 실행 명령 | `~/.local/bin/slides-wsl` (`start`/`status`/`stop`), 로그 `~/.local/state/wsl-notes/slides-dev.log` |
 | 미리보기 에이전트 지침 | `~/.gemini/config/skills/slides-preview/SKILL.md` (Antigravity 전역 skill) |
-| officecli | `~/.local/bin/officecli`, skill: `~/.agents/skills/officecli/` |
+| officecli | `~/.local/bin/officecli`, skill: `~/.gemini/config/skills/officecli/`(Antigravity), `~/.agents/skills/officecli/` |
 | Node(없을 때만) / pnpm(없을 때만) | `~/.local/share/wsl-notes/node/`, `~/.local/share/wsl-notes/tools/` |
 | 도구 설치 기록 | `~/.local/share/wsl-notes/tools-install.json` |
 
