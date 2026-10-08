@@ -147,13 +147,35 @@ class ToolsTests(unittest.TestCase):
         path = tools.create_launcher(self.home, slides, self.home / 'node bin', self.home / 'tools', 5173)
         text = path.read_text()
         self.assertIn(tools.core.MARKER, text)
-        self.assertIn("cd '" + str(slides).replace("'", "'\"'\"'") + "'", text)
+        self.assertIn("slides='" + str(slides).replace("'", "'\"'\"'") + "'", text)
+        self.assertIn('port=5173', text)
+        for command in ('start)', 'status)', 'stop)', 'setsid nohup', '--no-skills-check'):
+            self.assertIn(command, text)
         self.assertTrue(path.stat().st_mode & 0o100)
         subprocess.run(['bash', '-n', str(path)], check=True)
         path.write_text('#!/bin/sh\necho mine\n')
         with self.assertRaises(RuntimeError):
             tools.create_launcher(self.home, slides, None, self.home / 'tools', 5173)
         self.assertEqual(path.read_text(), '#!/bin/sh\necho mine\n')
+
+    def test_launcher_rejects_unknown_command_without_starting(self):
+        path = tools.create_launcher(self.home, self.home / 'Slides', None, self.home / 'tools', 5173)
+        result = subprocess.run(['bash', str(path), 'bogus'], capture_output=True, text=True,
+                                env={'PATH': '/usr/bin:/bin', 'HOME': str(self.home)})
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('usage', result.stderr)
+
+    def test_preview_skill_is_managed_and_never_replaces_a_user_skill(self):
+        path = self.home / '.gemini/config/skills/slides-preview/SKILL.md'
+        self.assertEqual(tools.install_preview_skill(self.home), 'ok')
+        text = path.read_text()
+        self.assertTrue(text.startswith('---\nname: slides-preview\n'))
+        self.assertIn(tools.core.MARKER, text)
+        self.assertIn('slides-wsl start', text)
+        self.assertEqual(tools.install_preview_skill(self.home), 'ok')  # managed: refreshed in place
+        path.write_text('my own skill')
+        self.assertEqual(tools.install_preview_skill(self.home), 'kept-unmanaged')
+        self.assertEqual(path.read_text(), 'my own skill')
 
     def test_officecli_present_skips_installer_and_keeps_skill(self):
         binary = self.home / '.local/bin/officecli'

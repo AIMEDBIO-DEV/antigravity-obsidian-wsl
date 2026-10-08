@@ -60,6 +60,8 @@ if tools_record.exists():
         check('slide theme ' + theme, theme_file.is_file(), str(theme_file))
     launcher = Path(tools.get('launcher', home / '.local/bin/slides-wsl'))
     check('slides launcher', launcher.is_file(), str(launcher))
+    skill = home / '.gemini/config/skills/slides-preview/SKILL.md'
+    check('slides preview skill', skill.is_file(), str(skill))
 else:
     print('INFO: document/slide tools not installed (skipped or --no-tools); run ./setup.sh to add them.')
 print('Manual check: type Korean using Hangul/Right Alt or Shift+Space in Obsidian (WSLg).')
