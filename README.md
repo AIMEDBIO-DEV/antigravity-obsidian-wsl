@@ -272,19 +272,32 @@ officecli는 공식 스크립트를 그대로 신뢰하고 자동 업데이트�
 기존 작업공간의 open-slide는 `pnpm up @open-slide/core`로 직접 올립니다.
 공식 스크립트는 `~/.local/bin`이 PATH에 없으면 `~/.bashrc`에 PATH 한 줄을 추가합니다.
 스크립트가 감지된 에이전트 폴더에 skill을 넣지만 Antigravity 폴더는 감지하지 못할 수 있으므로,
-설치기가 `~/.agents/skills/officecli/SKILL.md`가 없으면 별도로 내려받아 둡니다(기존 파일은 유지).
+설치기가 Antigravity 전역 경로 `~/.gemini/config/skills/officecli/SKILL.md`와 `~/.agents/skills/officecli/SKILL.md` 중 없는 쪽을 채웁니다. 한쪽에 있으면 그 파일을 복사하고, 둘 다 없으면 내려받습니다(기존 파일은 유지).
 
 ### 사용
 
-```bash
-officecli --version
-~/.local/bin/slides-wsl      # open-slide 개발 서버 실행, Windows 브라우저에서 http://localhost:5173 열기
-```
+**슬라이드 미리보기는 터미널 대신 대화로 엽니다.** WSL에 연결된 Antigravity 데스크톱 앱에서 이렇게 요청하세요.
 
-슬라이드 작업은 `~/Slides`에서 Antigravity CLI(`agy`)를 실행해 요청합니다. 예: “`/create-slide`로 이번 주 주간 보고를 cmc-weekly 테마로 만들어 줘.”
+> 슬라이드 미리보기 열어줘
+
+설치기가 넣어 둔 전역 skill(`slides-preview`)에 따라 에이전트가 `slides-wsl start`로 서버를 백그라운드에서 띄웁니다.
+서버가 준비되면 Windows 브라우저가 열리고, 에이전트가 주소(기본 `http://localhost:5173`)를 알려 줍니다.
+“미리보기 꺼줘”라고 하면 서버를 종료합니다. 슬라이드를 고치면 열린 화면에 바로 반영되므로 다시 켤 필요가 없습니다.
+
+슬라이드 작성도 같은 방식입니다. 예: “`/create-slide`로 이번 주 주간 보고를 cmc-weekly 테마로 만들어 줘.”
 개발 서버의 **Themes** 패널에서 `cmc-weekly` 데모를 확인할 수 있습니다.
 PPTX로 내보낼 때 표를 PowerPoint에서 편집할 수 있는 표로 바꾸는 방법은 [slide-templates/README.md](slide-templates/README.md#pptx로-내보낼-때-표를-네이티브-표로-바꾸기)를 참고하세요.
-미리보기 브라우저가 자동으로 열리지 않으면 터미널에 표시된 주소를 Windows 브라우저에 직접 입력하세요.
+브라우저가 자동으로 열리지 않으면 에이전트가 알려 준 주소를 Windows 브라우저에 직접 입력하세요.
+
+터미널을 쓰는 경우 같은 명령을 직접 실행할 수 있습니다.
+
+```bash
+officecli --version
+~/.local/bin/slides-wsl start    # 백그라운드 실행 후 브라우저 열기 (이미 실행 중이면 브라우저만)
+~/.local/bin/slides-wsl status   # 실행 중이면 주소 출력
+~/.local/bin/slides-wsl stop     # 종료
+~/.local/bin/slides-wsl          # 앞쪽에서 실행, Ctrl+C로 종료
+```
 
 ### 문제 해결
 
@@ -306,8 +319,9 @@ PPTX로 내보낼 때 표를 PowerPoint에서 편집할 수 있는 표로 바꾸
 | 설치 기록 | `~/.local/share/wsl-notes/install.json` |
 | 기본 보관함 | `~/Obsidian/Notes` |
 | 슬라이드 작업공간 | `~/Slides` (테마: `themes/cmc-weekly.*`, 로고: `assets/cmc-weekly/image1~3.png`, 글꼴: `assets/fonts/pretendard/`, 도구: `scripts/`) |
-| 슬라이드 실행 명령 | `~/.local/bin/slides-wsl` |
-| officecli | `~/.local/bin/officecli`, skill: `~/.agents/skills/officecli/` |
+| 슬라이드 실행 명령 | `~/.local/bin/slides-wsl` (`start`/`status`/`stop`), 로그 `~/.local/state/wsl-notes/slides-dev.log` |
+| 미리보기 에이전트 지침 | `~/.gemini/config/skills/slides-preview/SKILL.md` (Antigravity 전역 skill) |
+| officecli | `~/.local/bin/officecli`, skill: `~/.gemini/config/skills/officecli/`(Antigravity), `~/.agents/skills/officecli/` |
 | Node(없을 때만) / pnpm(없을 때만) | `~/.local/share/wsl-notes/node/`, `~/.local/share/wsl-notes/tools/` |
 | 도구 설치 기록 | `~/.local/share/wsl-notes/tools-install.json` |
 
@@ -371,7 +385,7 @@ Antigravity는 이 저장소 밖(Windows 앱)이므로 문제 해결은 해당 �
 
 제거하려면 Obsidian을 종료하고 위 표의 앱 파일, 실행 명령, 시작 메뉴 항목을 삭제합니다.
 **`~/Obsidian/Notes`, `~/Slides` 및 앱 사용자 설정은 별도 데이터이므로 보존하세요.**
-도구는 `~/.local/bin/slides-wsl`, `~/.local/bin/officecli`와 `~/.local/share/wsl-notes/{node,tools}`를 삭제하면 제거됩니다.
+도구는 `~/.local/bin/slides-wsl stop`으로 서버를 끈 뒤 `~/.local/bin/slides-wsl`, `~/.local/bin/officecli`, `~/.gemini/config/skills/slides-preview/`와 `~/.local/share/wsl-notes/{node,tools}`를 삭제하면 제거됩니다.
 이 도구는 노트 삭제 명령을 제공하지 않습니다.
 
 ## 한글 입력

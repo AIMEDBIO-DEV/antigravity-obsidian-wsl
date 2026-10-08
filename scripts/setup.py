@@ -88,7 +88,8 @@ def finish(home, distribution, powershell):
     if tools and tools.get('complete'):
         print('문서·슬라이드 도구:')
         print('6. officecli로 임시 docx 한 개를 만들고 열어 보세요 (예: officecli create /tmp/test.docx).')
-        print(f'7. {tools["launcher"]} 로 미리보기를 열고, 테마 패널에서 cmc-weekly 데모가 보이는지 확인하세요.')
+        print('7. Antigravity에 "슬라이드 미리보기 열어줘"라고 요청해 미리보기를 열고, 테마 패널에서 cmc-weekly 데모가 보이는지 확인하세요.')
+        print(f'   (에이전트가 {tools["launcher"]} start 를 실행합니다. 터미널에서는 같은 명령으로 직접 열 수 있습니다.)')
         print('작업공간:', tools['slides'])
     elif tools:
         print('문서·슬라이드 도구 설치가 완료되지 않았습니다. 네트워크 연결 후 ./setup.sh를 다시 실행하세요.')

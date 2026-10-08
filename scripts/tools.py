@@ -17,6 +17,7 @@ import install as core  # noqa: E402  (reuses download/verify/extract and the ma
 
 REPO = Path(__file__).resolve().parents[1]
 RECORD = 'tools-install.json'
+OFFICECLI_SKILL_DIRS = ('.gemini/config/skills/officecli/SKILL.md', '.agents/skills/officecli/SKILL.md')
 
 
 def supported_node(version):
@@ -102,14 +103,27 @@ def ensure_officecli(home, spec, offline):
     version = command_output([found, '--version'])
     if not version:
         raise RuntimeError(f'officecli is installed but did not report a version: {found}')
-    skill = home / '.agents/skills/officecli/SKILL.md'
-    if not skill.exists() and not offline:
-        skill.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory() as temp:
-            downloaded = Path(temp) / 'SKILL.md'
-            fetch(spec['skill_url'], downloaded)
-            shutil.copyfile(downloaded, skill)
+    ensure_officecli_skill(home, spec, offline)
     return version, status
+
+
+def ensure_officecli_skill(home, spec, offline):
+    """Antigravity reads global skills from ~/.gemini/config/skills; ~/.agents/skills serves other agents.
+    Missing copies are filled from an existing one (or one download); existing files are never replaced."""
+    targets = [home / relative for relative in OFFICECLI_SKILL_DIRS]
+    missing = [path for path in targets if not path.exists()]
+    if not missing:
+        return
+    with tempfile.TemporaryDirectory() as temp:
+        source = next((path for path in targets if path.exists()), None)
+        if source is None:
+            if offline:
+                return
+            source = Path(temp) / 'SKILL.md'
+            fetch(spec['skill_url'], source)
+        for path in missing:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, path)
 
 
 def scaffold_slides(slides, env, offline):
@@ -160,19 +174,99 @@ def apply_theme(slides, bundle):
     return written, kept
 
 
+LAUNCHER = r"""#!/usr/bin/env bash
+@MARKER@
+# slides-wsl          foreground dev server (Ctrl+C to stop)
+# slides-wsl start    background server for agents; returns once it answers, then opens the browser
+# slides-wsl status   prints the URL while running (exit 3 when stopped)
+# slides-wsl stop     stops the background server
+set -euo pipefail
+@PATH_LINE@
+slides=@SLIDES@
+port=@PORT@
+state="${XDG_STATE_HOME:-$HOME/.local/state}/wsl-notes"
+pid_file="$state/slides-dev.pid"
+log_file="$state/slides-dev.log"
+
+open_browser() { (cd /mnt/c 2>/dev/null; powershell.exe -NoProfile -Command "Start-Process '$1'" >/dev/null 2>&1) || true; }
+running() { [[ -f $pid_file ]] && kill -0 "$(cat "$pid_file")" 2>/dev/null; }
+server_url() { grep -o 'http://localhost:[0-9]*' "$log_file" 2>/dev/null | head -n 1 || true; }
+
+case "${1:-}" in
+  '')
+    cd "$slides"
+    echo "슬라이드 미리보기: http://localhost:$port (종료: Ctrl+C)"
+    (sleep 5; open_browser "http://localhost:$port") &
+    exec pnpm exec open-slide dev --port "$port"
+    ;;
+  start)
+    mkdir -p "$state"
+    url=$(server_url)
+    if running && [[ -n $url ]] && curl -sf -o /dev/null "$url"; then
+      echo "이미 실행 중: $url (종료: slides-wsl stop)"
+      open_browser "$url"
+      exit 0
+    fi
+    cd "$slides"
+    # setsid + nohup: the server survives the agent's terminal and stops as one process group.
+    # --no-skills-check: the drift prompt would wait forever without a terminal.
+    setsid nohup pnpm exec open-slide dev --port "$port" --no-skills-check >"$log_file" 2>&1 </dev/null &
+    echo $! >"$pid_file"
+    for _ in $(seq 1 120); do
+      url=$(server_url)
+      if [[ -n $url ]] && curl -sf -o /dev/null "$url"; then
+        echo "슬라이드 미리보기 실행됨: $url (종료: slides-wsl stop, 로그: $log_file)"
+        open_browser "$url"
+        exit 0
+      fi
+      running || break
+      sleep 0.5
+    done
+    echo "미리보기 서버를 시작하지 못했습니다. 로그: $log_file" >&2
+    tail -n 20 "$log_file" >&2 || true
+    exit 1
+    ;;
+  status)
+    url=$(server_url)
+    if running && [[ -n $url ]] && curl -sf -o /dev/null "$url"; then echo "실행 중: $url"; else echo '중지됨'; exit 3; fi
+    ;;
+  stop)
+    if running; then
+      pid=$(cat "$pid_file")
+      kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+      echo '미리보기 서버를 종료했습니다.'
+    else
+      echo '실행 중인 미리보기 서버가 없습니다.'
+    fi
+    rm -f "$pid_file"
+    ;;
+  *)
+    echo 'usage: slides-wsl [start|status|stop]' >&2
+    exit 2
+    ;;
+esac
+"""
+
+
 def create_launcher(home, slides, node_bin, tools_bin, port):
     path = home / '.local/bin/slides-wsl'
-    url = f'http://localhost:{port}'
     prefix = ':'.join(str(item) for item in (node_bin, tools_bin) if item)
-    content = '\n'.join([
-        '#!/usr/bin/env bash', core.MARKER, 'set -euo pipefail',
-        f'export PATH={shlex.quote(prefix)}:"$PATH"' if prefix else ':',
-        f'cd {shlex.quote(str(slides))}',
-        f'echo "슬라이드 미리보기: {url} (종료: Ctrl+C)"',
-        f'(sleep 5; cd /mnt/c 2>/dev/null; powershell.exe -NoProfile -Command "Start-Process \'{url}\'" >/dev/null 2>&1 || true) &',
-        'exec pnpm dev', ''])
+    content = (LAUNCHER.replace('@MARKER@', core.MARKER)
+               .replace('@PATH_LINE@', f'export PATH={shlex.quote(prefix)}:"$PATH"' if prefix else ':')
+               .replace('@SLIDES@', shlex.quote(str(slides)))
+               .replace('@PORT@', str(int(port))))
     core.managed_write(path, content, 0o755)
     return path
+
+
+def install_preview_skill(home):
+    """Global Antigravity skill: the agent starts the preview when the user asks for it in chat."""
+    path = home / '.gemini/config/skills/slides-preview/SKILL.md'
+    try:
+        core.managed_write(path, (REPO / 'agent-skills/slides-preview/SKILL.md').read_text())
+    except RuntimeError:  # the user's own skill with the same name stays untouched
+        return 'kept-unmanaged'
+    return 'ok'
 
 
 def main(argv=None):
@@ -229,6 +323,7 @@ def main(argv=None):
             kept += existing
     steps['themes'] = 'ok' if (slides / 'package.json').is_file() else 'skipped-offline'
     launcher = create_launcher(home, slides, node_bin, tools_bin, specs['open-slide']['port'])
+    steps['preview_skill'] = install_preview_skill(home)
     complete = all(not value.startswith('skipped') for value in steps.values())
     core.atomic_write(record_path, json.dumps({
         'slides': str(slides), 'complete': complete, 'steps': steps, 'launcher': str(launcher),

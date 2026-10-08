@@ -30,7 +30,7 @@
 
 9. `~/.local/share/wsl-notes/tools-install.json`이 있고 `complete`가 true이면 도구도 실제로 확인한다.
    - **officecli:** 사용하지 않은 임시 경로(예: `/tmp`)에 `officecli create`로 docx를 만들고 파일이 생성됐는지 읽는다. 사용자의 기존 문서를 시험에 쓰지 않는다.
-   - **open-slide:** `~/.local/bin/slides-wsl`로 개발 서버를 띄우고 사용자가 Windows 브라우저에서 화면을 보는지 확인받는다. Themes 패널의 `cmc-weekly` 데모 표시까지 안내한다.
+   - **open-slide:** 사용자가 WSL에 연결된 Antigravity 데스크톱 앱에 "슬라이드 미리보기 열어줘"라고 요청하게 한다. 에이전트가 전역 skill `slides-preview`에 따라 `~/.local/bin/slides-wsl start`로 서버를 백그라운드에서 띄우는지, 사용자가 Windows 브라우저에서 화면을 보는지 확인받는다. Themes 패널의 `cmc-weekly` 데모 표시까지 안내한다. 확인이 끝나면 `slides-wsl stop`으로 정리한다.
    - **슬라이드 작성:** 사용자가 원하면 Antigravity 데스크톱 앱이나 `~/Slides`의 CLI로 `/create-slide` 시험 덱을 만들고 미리보기에서 열리는지 확인한다.
    CLI가 대신 실행해 놓고 화면 확인을 마친 것으로 보고하지 않는다.
 

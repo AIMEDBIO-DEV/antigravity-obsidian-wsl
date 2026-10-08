@@ -147,13 +147,35 @@ class ToolsTests(unittest.TestCase):
         path = tools.create_launcher(self.home, slides, self.home / 'node bin', self.home / 'tools', 5173)
         text = path.read_text()
         self.assertIn(tools.core.MARKER, text)
-        self.assertIn("cd '" + str(slides).replace("'", "'\"'\"'") + "'", text)
+        self.assertIn("slides='" + str(slides).replace("'", "'\"'\"'") + "'", text)
+        self.assertIn('port=5173', text)
+        for command in ('start)', 'status)', 'stop)', 'setsid nohup', '--no-skills-check'):
+            self.assertIn(command, text)
         self.assertTrue(path.stat().st_mode & 0o100)
         subprocess.run(['bash', '-n', str(path)], check=True)
         path.write_text('#!/bin/sh\necho mine\n')
         with self.assertRaises(RuntimeError):
             tools.create_launcher(self.home, slides, None, self.home / 'tools', 5173)
         self.assertEqual(path.read_text(), '#!/bin/sh\necho mine\n')
+
+    def test_launcher_rejects_unknown_command_without_starting(self):
+        path = tools.create_launcher(self.home, self.home / 'Slides', None, self.home / 'tools', 5173)
+        result = subprocess.run(['bash', str(path), 'bogus'], capture_output=True, text=True,
+                                env={'PATH': '/usr/bin:/bin', 'HOME': str(self.home)})
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('usage', result.stderr)
+
+    def test_preview_skill_is_managed_and_never_replaces_a_user_skill(self):
+        path = self.home / '.gemini/config/skills/slides-preview/SKILL.md'
+        self.assertEqual(tools.install_preview_skill(self.home), 'ok')
+        text = path.read_text()
+        self.assertTrue(text.startswith('---\nname: slides-preview\n'))
+        self.assertIn(tools.core.MARKER, text)
+        self.assertIn('slides-wsl start', text)
+        self.assertEqual(tools.install_preview_skill(self.home), 'ok')  # managed: refreshed in place
+        path.write_text('my own skill')
+        self.assertEqual(tools.install_preview_skill(self.home), 'kept-unmanaged')
+        self.assertEqual(path.read_text(), 'my own skill')
 
     def test_officecli_present_skips_installer_and_keeps_skill(self):
         binary = self.home / '.local/bin/officecli'
@@ -168,6 +190,32 @@ class ToolsTests(unittest.TestCase):
             self.assertEqual(tools.ensure_officecli(self.home, SPECS['officecli'], False), ('1.0.152', 'present'))
         run.assert_not_called()
         self.assertEqual(skill.read_text(), 'local skill')
+        # Antigravity's global skill folder receives a copy of the existing skill, without downloading.
+        self.assertEqual((self.home / '.gemini/config/skills/officecli/SKILL.md').read_text(), 'local skill')
+
+    def test_officecli_skill_downloads_once_for_both_agent_folders(self):
+        def fake_fetch(url, destination):
+            Path(destination).write_text('downloaded skill')
+        with patch.object(tools, 'fetch', side_effect=fake_fetch) as fetch:
+            tools.ensure_officecli_skill(self.home, SPECS['officecli'], False)
+            tools.ensure_officecli_skill(self.home, SPECS['officecli'], False)
+        fetch.assert_called_once()
+        for relative in tools.OFFICECLI_SKILL_DIRS:
+            self.assertEqual((self.home / relative).read_text(), 'downloaded skill')
+
+    def test_officecli_skill_keeps_both_existing_files_and_skips_offline_download(self):
+        with patch.object(tools, 'fetch') as fetch:
+            tools.ensure_officecli_skill(self.home, SPECS['officecli'], True)
+        fetch.assert_not_called()
+        self.assertFalse((self.home / '.gemini').exists())
+        for index, relative in enumerate(tools.OFFICECLI_SKILL_DIRS):
+            (self.home / relative).parent.mkdir(parents=True, exist_ok=True)
+            (self.home / relative).write_text(f'mine {index}')
+        with patch.object(tools, 'fetch') as fetch:
+            tools.ensure_officecli_skill(self.home, SPECS['officecli'], False)
+        fetch.assert_not_called()
+        for index, relative in enumerate(tools.OFFICECLI_SKILL_DIRS):
+            self.assertEqual((self.home / relative).read_text(), f'mine {index}')
 
     def test_officecli_offline_without_binary_is_skipped(self):
         with patch.object(tools.shutil, 'which', return_value=None), patch.object(tools.subprocess, 'run') as run:
