@@ -155,6 +155,35 @@ def scaffold_slides(slides, env, offline):
     return status
 
 
+RULES_MARKER = '<!-- wsl-notes:office-files -->'
+WORKSPACE_RULES = f"""
+{RULES_MARKER}
+## Office 파일 읽기 (antigravity-obsidian-wsl)
+
+- `.pptx`/`.docx`/`.xlsx`를 파일 보기 도구로 열거나 채팅 첨부로 모델에 넘기지 않는다. 모델 API(예: Vertex AI Gemini)가 Office MIME 타입을 거부해 요청 전체가 `400 INVALID_ARGUMENT`로 실패한다.
+- 대신 `officecli`로 텍스트·구조를 꺼내 읽는다: `officecli view <file> outline`, `officecli view <file> text`, `officecli get <file> '/slide[1]' --depth 1`.
+- 레이아웃·디자인을 눈으로 봐야 하면 사용자에게 PDF나 이미지로 내보내 달라고 요청한다.
+"""
+
+
+def ensure_workspace_rules(slides):
+    """Append the Office-file rule to the workspace AGENTS.md once (open-slide writes that file only at init),
+    and point GEMINI.md at it for Antigravity, as the vault does. Nothing else in the file is changed."""
+    agents = slides / 'AGENTS.md'
+    if not agents.is_file():
+        return 'no-agents-md'
+    text = agents.read_text()
+    status = 'present'
+    if RULES_MARKER not in text:
+        with agents.open('a') as handle:
+            handle.write(('' if text.endswith('\n') else '\n') + WORKSPACE_RULES)
+        status = 'added'
+    gemini = slides / 'GEMINI.md'
+    if not gemini.exists() and not gemini.is_symlink():
+        gemini.symlink_to('AGENTS.md')
+    return status
+
+
 def workspace_version(slides):
     """Installed open-slide version, read from the workspace (the scaffolder is not pinned)."""
     manifest = slides / 'node_modules/@open-slide/core/package.json'
@@ -334,6 +363,8 @@ def main(argv=None):
             written += done
             kept += existing
     steps['themes'] = 'ok' if (slides / 'package.json').is_file() else 'skipped-offline'
+    if (slides / 'package.json').is_file():
+        steps['workspace_rules'] = ensure_workspace_rules(slides)
     launcher = create_launcher(home, slides, node_bin, tools_bin, specs['open-slide']['port'])
     steps['preview_skill'] = install_preview_skill(home)
     complete = all(not value.startswith(('skipped', 'failed')) for value in steps.values())

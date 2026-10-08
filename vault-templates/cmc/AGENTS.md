@@ -77,6 +77,12 @@ OKF v0.2 hard conformance를 따른다. 모든 concept note에는 parseable YAML
 - placeholder를 남긴 초안은 발송 가능한 상태로 표시하지 않는다.
 - 수정본은 별도 버전 파일보다 같은 노트를 갱신하고 `draft`, `sent`, `superseded` 상태를 명시한다.
 
+## Office 파일
+
+- `.pptx`/`.docx`/`.xlsx`를 파일 보기 도구로 열거나 채팅 첨부로 모델에 넘기지 않는다. 모델 API(예: Vertex AI Gemini)가 Office MIME 타입을 거부해 요청 전체가 `400 INVALID_ARGUMENT`로 실패한다.
+- 대신 `officecli`로 텍스트·구조를 꺼내 읽는다: `officecli view <file> outline`, `officecli view <file> text`, `officecli get <file> '/slide[1]' --depth 1`.
+- 레이아웃·디자인을 눈으로 봐야 하면 사용자에게 PDF나 이미지로 내보내 달라고 요청한다.
+
 ## 작업 종료
 
 1. 의도한 파일만 변경했는지 `git status`와 diff를 확인한다.
