@@ -222,6 +222,34 @@ class ToolsTests(unittest.TestCase):
             self.assertEqual(tools.ensure_officecli(self.home, SPECS['officecli'], True), (None, 'skipped-offline'))
         run.assert_not_called()
 
+    def test_officecli_that_cannot_run_reports_why(self):
+        binary = self.home / '.local/bin/officecli'
+        binary.parent.mkdir(parents=True)
+        binary.write_text('#!/bin/sh\necho "Couldn\'t find a valid ICU package" >&2\nexit 134\n')
+        binary.chmod(0o755)
+        with patch.object(tools.shutil, 'which', return_value=None), \
+             self.assertRaisesRegex(RuntimeError, 'ICU package'):
+            tools.ensure_officecli(self.home, SPECS['officecli'], False)
+
+    def test_officecli_failure_still_installs_slide_tools(self):
+        slides = self.workspace()
+        error = RuntimeError('officecli is installed but did not report a version')
+        with patch.object(tools.Path, 'home', return_value=self.home), \
+             patch.object(tools.platform, 'machine', return_value='x86_64'), \
+             patch.object(tools, 'ensure_officecli', side_effect=error), \
+             patch.object(tools, 'ensure_node', return_value=(None, '24.21.0', 'system')) as node, \
+             patch.object(tools, 'ensure_pnpm', return_value=('10.33.2', self.home / 'bin')), \
+             patch.object(tools, 'scaffold_slides', return_value='present') as scaffold, \
+             redirect_stdout(io.StringIO()), \
+             self.assertRaisesRegex(RuntimeError, 'other tools were installed'):
+            tools.main(['--slides', str(slides)])
+        node.assert_called_once()
+        scaffold.assert_called_once()
+        record = json.loads((self.home / '.local/share/wsl-notes' / tools.RECORD).read_text())
+        self.assertFalse(record['complete'])
+        self.assertEqual(record['steps']['officecli'], 'failed')
+        self.assertEqual(record['steps']['workspace'], 'present')
+
     def test_plan_changes_nothing(self):
         with patch.object(tools.Path, 'home', return_value=self.home), redirect_stdout(io.StringIO()) as out:
             self.assertIsNone(tools.main(['--plan', '--slides', str(self.home / '내 슬라이드')]))

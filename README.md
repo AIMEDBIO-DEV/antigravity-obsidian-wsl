@@ -302,6 +302,7 @@ officecli --version
 ### 문제 해결
 
 - **`officecli`를 찾을 수 없음:** 새 터미널을 열거나 `source ~/.bashrc`를 실행합니다. 그래도 없으면 `~/.local/bin/officecli`를 확인합니다.
+- **officecli가 `did not report a version` / `Couldn't find a valid ICU package`로 실패:** ICU 라이브러리가 없는 경우입니다(Ubuntu 26.04 기본 이미지). `scripts/install-deps.sh`가 설치하므로 최신 저장소로 `./setup.sh`를 다시 실행하세요. officecli가 실패해도 open-slide 등 나머지 도구는 설치됩니다.
 - **`~/Slides`가 open-slide 폴더가 아니라며 중단:** 기존 폴더는 수정하지 않습니다. `--slides`로 다른 경로를 지정하세요.
 - **도구 설치 실패:** 원인을 해결하고 `python3 scripts/tools.py`만 다시 실행하면 됩니다. 이미 만든 결과는 유지됩니다.
 - **`--offline`:** 네트워크가 필요한 단계는 건너뛰고 그 사실을 표시합니다. 완료로 기록되지 않으므로 연결 후 다시 실행하세요.

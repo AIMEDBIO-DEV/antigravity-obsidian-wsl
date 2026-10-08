@@ -53,7 +53,9 @@ if tools_record.exists():
     slides = Path(tools['slides'])
     check('tools install', tools.get('complete') is True, json.dumps(tools.get('steps'), ensure_ascii=False))
     officecli = shutil.which('officecli') or str(home / '.local/bin/officecli')
-    check('officecli', Path(officecli).is_file(), officecli)
+    # Run it: the .NET binary exists but aborts when libicu is missing.
+    runs = Path(officecli).is_file() and subprocess.run([officecli, '--version'], capture_output=True).returncode == 0
+    check('officecli', runs, officecli if runs else f'{officecli} (missing or fails to run; check libicu)')
     check('open-slide workspace', (slides / 'package.json').is_file() and (slides / 'node_modules').is_dir(), str(slides))
     for theme in tools.get('themes', []):
         theme_file = slides / 'themes' / (theme + '.md')
