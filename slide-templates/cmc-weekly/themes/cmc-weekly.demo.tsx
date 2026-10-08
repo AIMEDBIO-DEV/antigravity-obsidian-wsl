@@ -2,9 +2,35 @@ import React from 'react';
 import type { Page } from '@open-slide/core';
 import { useSlidePageNumber } from '@open-slide/core';
 
-import bgBanner from '../assets/image1.png';
-import companyLogoWhite from '../assets/image2.png';
-import companyLogoRed from '../assets/image3.png';
+import bgBanner from '../assets/cmc-weekly/image1.png';
+import companyLogoWhite from '../assets/cmc-weekly/image2.png';
+import companyLogoRed from '../assets/cmc-weekly/image3.png';
+import pretendard400 from '../assets/fonts/pretendard/Pretendard-Regular.subset.woff2';
+import pretendard700 from '../assets/fonts/pretendard/Pretendard-Bold.subset.woff2';
+import pretendard800 from '../assets/fonts/pretendard/Pretendard-ExtraBold.subset.woff2';
+
+// Pretendard webfont — registered once at module level (not per page) so every
+// viewer / PDF / HTML export renders the same face regardless of locally installed fonts.
+const FONT_STYLE_ID = 'osd-webfont-theme-cmc-weekly';
+const fontCss = ([
+  [400, pretendard400],
+  [700, pretendard700],
+  [800, pretendard800],
+] as const)
+  .map(
+    ([weight, url]) =>
+      `@font-face { font-family: 'Pretendard'; font-style: normal; font-weight: ${weight}; font-display: swap; src: url(${url}) format('woff2'); }`,
+  )
+  .join('\n');
+if (typeof document !== 'undefined') {
+  let fontStyle = document.getElementById(FONT_STYLE_ID);
+  if (!fontStyle) {
+    fontStyle = document.createElement('style');
+    fontStyle.id = FONT_STYLE_ID;
+    document.head.appendChild(fontStyle);
+  }
+  if (fontStyle.textContent !== fontCss) fontStyle.textContent = fontCss;
+}
 
 const pageFill: React.CSSProperties = {
   width: '100%',
@@ -43,6 +69,40 @@ const Footer = () => {
 };
 
 // -------------------------------------------------------------
+// Written by box (slideLayout 표 17) — spec from the source weekly PPT layout
+// -------------------------------------------------------------
+const tableLine = '2px solid #000000';
+
+const WrittenBy = ({ researcher, style }: { researcher: string; style?: React.CSSProperties }) => (
+  <table
+    style={{
+      ...style,
+      width: 352,
+      height: 41,
+      flex: 'none',
+      borderCollapse: 'collapse',
+      tableLayout: 'fixed',
+      fontFamily: 'Arial, "Malgun Gothic", sans-serif',
+      fontSize: 20,
+      fontWeight: 400,
+      lineHeight: 1.2,
+      color: '#000000',
+    }}
+  >
+    <colgroup>
+      <col style={{ width: 125 }} />
+      <col style={{ width: 227 }} />
+    </colgroup>
+    <tbody>
+      <tr>
+        <td style={{ border: tableLine, background: '#f2f2f2', padding: '0 4px 0 8px', whiteSpace: 'nowrap' }}>Written by</td>
+        <td style={{ border: tableLine, background: '#ffffff', padding: '0 14px', whiteSpace: 'nowrap' }}>{researcher}</td>
+      </tr>
+    </tbody>
+  </table>
+);
+
+// -------------------------------------------------------------
 // Common Master Header (SlideLayout13 / SlideLayout15 Top Header)
 // -------------------------------------------------------------
 const MasterHeader = ({
@@ -58,7 +118,7 @@ const MasterHeader = ({
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        height: 36,
+        height: 41,
       }}
     >
       {/* Left: Document Title / Date range */}
@@ -100,49 +160,8 @@ const MasterHeader = ({
           <span style={{ color: '#d65532' }}>● 큰 issue 있음</span>
         </div>
 
-        {/* Vertical divider */}
-        <div style={{ width: 1, height: 20, background: '#d1d5db', margin: '0 4px' }} />
-
-        {/* Written by Table */}
-        <table
-          style={{
-            borderCollapse: 'collapse',
-            border: '1px solid #4b5563',
-            height: 26,
-            fontSize: 12,
-          }}
-        >
-          <tbody>
-            <tr>
-              <td
-                style={{
-                  background: '#f2f2f2',
-                  border: '1px solid #4b5563',
-                  padding: '2px 12px',
-                  fontWeight: 700,
-                  color: '#111827',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Written by
-              </td>
-              <td
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #4b5563',
-                  padding: '2px 16px',
-                  fontWeight: 600,
-                  color: '#111827',
-                  minWidth: 90,
-                  textAlign: 'center',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {researcher}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        {/* Written by — PPT layout table: 1pt (2px) black edges, #f2f2f2 label, 20px regular */}
+        <WrittenBy researcher={researcher} />
 
         {/* Official Red Company Logo for light backgrounds */}
         <img
@@ -434,11 +453,15 @@ type HeaderProps = {
   studyTitle: string;
   specificAim: string;
   dates?: [string, string, string, string, string];
-  activeDays?: [boolean, boolean, boolean, boolean, boolean];
   statusColor?: string;
   issuePlan: string;
   researcher: string;
 };
+
+// Tracker (표 5) — every edge 1pt black (2px), header rows #f2f2f2, M–F body cells #a6a6a6.
+const hd: React.CSSProperties = { border: tableLine, background: '#f2f2f2', padding: '2px 6px', textAlign: 'center', verticalAlign: 'middle' };
+const bd: React.CSSProperties = { border: tableLine, background: '#ffffff', padding: '4px 10px', verticalAlign: 'middle' };
+const day: React.CSSProperties = { border: tableLine, background: '#a6a6a6' };
 
 const TopHeaderTable = ({
   project,
@@ -446,69 +469,74 @@ const TopHeaderTable = ({
   studyTitle,
   specificAim,
   dates = ['14', '15', '16', '17', '18'],
-  activeDays = [false, true, true, false, false],
-  statusColor = '#16a34a',
+  statusColor = '#68a490',
   issuePlan,
   researcher,
 }: HeaderProps) => (
-  <div style={{ width: '100%', marginBottom: 12 }}>
-    <table
-      style={{
-        width: '100%',
-        borderCollapse: 'collapse',
-        fontSize: 12,
-        textAlign: 'center',
-        border: '1px solid #4b5563',
-      }}
-    >
-      <thead>
-        <tr style={{ background: '#f2f2f2', color: '#111827', height: 26 }}>
-          <th style={{ width: '6%', border: '1px solid #6b7280', padding: '3px 4px' }}>Project</th>
-          <th style={{ width: '8%', border: '1px solid #6b7280', padding: '3px 4px' }}>Exp No.</th>
-          <th style={{ width: '22%', border: '1px solid #6b7280', padding: '3px 4px' }}>Study Title</th>
-          <th style={{ width: '26%', border: '1px solid #6b7280', padding: '3px 4px' }}>Specific Aim</th>
-          <th style={{ width: '2.5%', border: '1px solid #6b7280' }}>M</th>
-          <th style={{ width: '2.5%', border: '1px solid #6b7280' }}>T</th>
-          <th style={{ width: '2.5%', border: '1px solid #6b7280' }}>W</th>
-          <th style={{ width: '2.5%', border: '1px solid #6b7280' }}>T</th>
-          <th style={{ width: '2.5%', border: '1px solid #6b7280' }}>F</th>
-          <th style={{ width: '2%', border: '1px solid #6b7280' }}>●</th>
-          <th style={{ width: '18%', border: '1px solid #6b7280', padding: '3px 4px' }}>Issue / Plan</th>
-          <th style={{ width: '8%', border: '1px solid #6b7280', padding: '3px 4px' }}>Researcher</th>
-        </tr>
-        <tr style={{ background: '#f9fafb', color: '#374151', height: 18, fontSize: 11 }}>
-          <td colSpan={4} style={{ border: '1px solid #d1d5db' }} />
-          <td style={{ border: '1px solid #d1d5db', fontWeight: 700 }}>{dates[0]}</td>
-          <td style={{ border: '1px solid #d1d5db', fontWeight: 700 }}>{dates[1]}</td>
-          <td style={{ border: '1px solid #d1d5db', fontWeight: 700 }}>{dates[2]}</td>
-          <td style={{ border: '1px solid #d1d5db', fontWeight: 700 }}>{dates[3]}</td>
-          <td style={{ border: '1px solid #d1d5db', fontWeight: 700 }}>{dates[4]}</td>
-          <td style={{ border: '1px solid #d1d5db' }} />
-          <td style={{ border: '1px solid #d1d5db' }} />
-          <td style={{ border: '1px solid #d1d5db' }} />
-        </tr>
-      </thead>
-      <tbody>
-        <tr style={{ height: 28, background: '#ffffff', color: '#111827' }}>
-          <td style={{ border: '1px solid #d1d5db', fontWeight: 800, color: '#c00000' }}>{project}</td>
-          <td style={{ border: '1px solid #d1d5db', fontWeight: 700 }}>{expNo}</td>
-          <td style={{ border: '1px solid #d1d5db', textAlign: 'left', padding: '3px 8px', fontWeight: 600 }}>{studyTitle}</td>
-          <td style={{ border: '1px solid #d1d5db', textAlign: 'left', padding: '3px 8px', fontSize: 11 }}>{specificAim}</td>
-          {/* 5-day schedule cells shaded in gray (not crimson) */}
-          <td style={{ border: '1px solid #d1d5db', background: '#9ca3af' }} />
-          <td style={{ border: '1px solid #d1d5db', background: '#9ca3af' }} />
-          <td style={{ border: '1px solid #d1d5db', background: '#9ca3af' }} />
-          <td style={{ border: '1px solid #d1d5db', background: '#9ca3af' }} />
-          <td style={{ border: '1px solid #d1d5db', background: '#9ca3af' }} />
-          <td style={{ border: '1px solid #d1d5db' }}>
-            <span style={{ color: statusColor, fontSize: 14 }}>●</span>
-          </td>
-          <td style={{ border: '1px solid #d1d5db', textAlign: 'left', padding: '3px 8px', fontSize: 11 }}>{issuePlan}</td>
-          <td style={{ border: '1px solid #d1d5db', fontWeight: 600, fontSize: 11 }}>{researcher}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <table
+    style={{
+      width: 1831,
+      marginBottom: 12,
+      borderCollapse: 'collapse',
+      tableLayout: 'fixed',
+      fontFamily: 'Arial, "Malgun Gothic", sans-serif',
+      fontSize: 14,
+      lineHeight: 1.2,
+      color: '#000000',
+    }}
+  >
+    <colgroup>
+      <col style={{ width: 83 }} />
+      <col style={{ width: 114 }} />
+      <col style={{ width: 335 }} />
+      <col style={{ width: 490 }} />
+      <col style={{ width: 47 }} />
+      <col style={{ width: 47 }} />
+      <col style={{ width: 47 }} />
+      <col style={{ width: 47 }} />
+      <col style={{ width: 47 }} />
+      <col style={{ width: 34 }} />
+      <col style={{ width: 420 }} />
+      <col style={{ width: 119 }} />
+    </colgroup>
+    <tbody>
+      <tr style={{ height: 26 }}>
+        <td rowSpan={2} style={hd}>Project</td>
+        <td rowSpan={2} style={hd}>Exp No.</td>
+        <td rowSpan={2} style={hd}>Study Title</td>
+        <td rowSpan={2} style={hd}>Specific Aim</td>
+        <td style={hd}>M</td>
+        <td style={hd}>T</td>
+        <td style={hd}>W</td>
+        <td style={hd}>T</td>
+        <td style={hd}>F</td>
+        <td rowSpan={2} style={hd} />
+        <td rowSpan={2} style={hd}>Issue / Plan</td>
+        <td rowSpan={2} style={hd}>Researcher</td>
+      </tr>
+      <tr style={{ height: 33 }}>
+        {dates.map((d, i) => (
+          <td key={i} style={hd}>{d}</td>
+        ))}
+      </tr>
+      <tr style={{ height: 30 }}>
+        <td style={{ ...bd, textAlign: 'center' }}>{project}</td>
+        <td style={{ ...bd, textAlign: 'center' }}>{expNo}</td>
+        <td style={bd}>{studyTitle}</td>
+        <td style={bd}>{specificAim}</td>
+        <td style={day} />
+        <td style={day} />
+        <td style={day} />
+        <td style={day} />
+        <td style={day} />
+        <td style={{ ...bd, padding: 0, textAlign: 'center' }}>
+          <span style={{ color: statusColor, fontSize: 14 }}>●</span>
+        </td>
+        <td style={bd}>{issuePlan}</td>
+        <td style={{ ...bd, textAlign: 'center' }}>{researcher}</td>
+      </tr>
+    </tbody>
+  </table>
 );
 
 const DemoBody: Page = () => (
@@ -527,8 +555,6 @@ const DemoBody: Page = () => (
       issuePlan="Finalize sample report & submit first batch (example)"
       researcher="담당자 C / A"
       dates={['14', '15', '16', '17', '18']}
-      activeDays={[false, true, true, false, false]}
-      statusColor="#16a34a"
     />
 
     <div style={{ marginBottom: 12 }}>
