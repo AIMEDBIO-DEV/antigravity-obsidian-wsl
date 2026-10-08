@@ -37,6 +37,13 @@ def command_output(command, env=None):
     return result.stdout.strip() if result.returncode == 0 else ''
 
 
+def failure_reason(command):
+    """First lines of a failing command's output, e.g. the .NET message about missing libicu."""
+    result = subprocess.run([str(item) for item in command], capture_output=True, text=True)
+    lines = (result.stderr or result.stdout).strip().splitlines()
+    return '\n'.join(lines[:2]) or f'exit code {result.returncode}'
+
+
 def tool_env(node_bin, tools_bin):
     env = os.environ.copy()
     extra = [str(path) for path in (node_bin, tools_bin) if path]
@@ -102,7 +109,7 @@ def ensure_officecli(home, spec, offline):
         found, status = str(binary), 'installed'
     version = command_output([found, '--version'])
     if not version:
-        raise RuntimeError(f'officecli is installed but did not report a version: {found}')
+        raise RuntimeError(f'officecli is installed but did not report a version: {found}\n{failure_reason([found, "--version"])}')
     ensure_officecli_skill(home, spec, offline)
     return version, status
 
@@ -303,7 +310,12 @@ def main(argv=None):
     cache = (args.cache or home / '.cache/wsl-notes').expanduser().resolve()
 
     steps = {}
-    officecli_version, steps['officecli'] = ensure_officecli(home, specs['officecli'], args.offline)
+    # A broken officecli must not block the slide tools; the failure is reported after the rest finishes.
+    officecli_error = None
+    try:
+        officecli_version, steps['officecli'] = ensure_officecli(home, specs['officecli'], args.offline)
+    except (RuntimeError, OSError, subprocess.CalledProcessError) as error:
+        officecli_version, steps['officecli'], officecli_error = None, 'failed', error
     node_bin, node_version, node_source = ensure_node(root, cache, specs['node'], args.offline)
     tools_bin = root / 'tools/bin'
     env = tool_env(node_bin, tools_bin)
@@ -324,7 +336,7 @@ def main(argv=None):
     steps['themes'] = 'ok' if (slides / 'package.json').is_file() else 'skipped-offline'
     launcher = create_launcher(home, slides, node_bin, tools_bin, specs['open-slide']['port'])
     steps['preview_skill'] = install_preview_skill(home)
-    complete = all(not value.startswith('skipped') for value in steps.values())
+    complete = all(not value.startswith(('skipped', 'failed')) for value in steps.values())
     core.atomic_write(record_path, json.dumps({
         'slides': str(slides), 'complete': complete, 'steps': steps, 'launcher': str(launcher),
         'themes': specs['themes'],
@@ -339,6 +351,8 @@ def main(argv=None):
     if not complete:
         print('일부 단계가 오프라인 때문에 생략되었습니다. 네트워크 연결 후 다시 실행하세요.')
     print('슬라이드 미리보기 실행:', launcher)
+    if officecli_error:
+        raise RuntimeError(f'officecli setup failed (other tools were installed): {officecli_error}')
     return complete
 
 

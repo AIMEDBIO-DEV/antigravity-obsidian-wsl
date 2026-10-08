@@ -18,5 +18,12 @@ for family in libgtk-3-0 libasound2; do
     packages+=("${family}t64")
   else packages+=("$family"); fi
 done
+# officecli is a .NET binary that aborts without ICU. Ubuntu 26.04's base image no longer pulls it in,
+# and the package name carries the ICU version (libicu70/74/78...), so pick the newest available.
+icu=$(apt-cache search --names-only '^libicu[0-9]+$' | awk '{print $1}' | sort -V | tail -n 1)
+if [[ -z $icu ]]; then
+  echo 'No libicu package found in apt sources; officecli needs it.' >&2; exit 1
+fi
+packages+=("$icu")
 "${elevate[@]}" apt-get install -y "${packages[@]}"
 echo 'Dependencies installed. Next: ./install.sh (as your normal Linux user).'
